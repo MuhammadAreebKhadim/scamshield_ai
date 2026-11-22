@@ -10,21 +10,18 @@
   <br />
 
   [![Live Production](https://img.shields.io/badge/▲_LIVE_PRODUCTION-SCAMSHIELD--AI--WELD--PI.VERCEL.APP-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://scamshield-ai-weld-pi.vercel.app)
-
   <br />
-
+  
   [![Stars](https://img.shields.io/github/stars/MuhammadAreebKhadim/scamshield_ai?style=for-the-badge&color=0066FF)](https://github.com/MuhammadAreebKhadim/scamshield_ai/stargazers)
   [![Forks](https://img.shields.io/github/forks/MuhammadAreebKhadim/scamshield_ai?style=for-the-badge&color=00F2FE)](https://github.com/MuhammadAreebKhadim/scamshield_ai/network/members)
   [![Issues](https://img.shields.io/github/issues/MuhammadAreebKhadim/scamshield_ai?style=for-the-badge&color=10B981)](https://github.com/MuhammadAreebKhadim/scamshield_ai/issues)
   [![License](https://img.shields.io/badge/LICENSE-MIT-0284C7?style=for-the-badge)](LICENSE)
-
   <br />
 
   [![Groq AI](https://img.shields.io/badge/Groq_AI-LLaMA--3.3_70B-F55036?style=for-the-badge&logo=groq&logoColor=white)](https://groq.com)
   [![VirusTotal](https://img.shields.io/badge/VirusTotal_API-v3_60+_Engines-3949AB?style=for-the-badge&logo=virustotal&logoColor=white)](https://www.virustotal.com)
   [![Google Safe Browsing](https://img.shields.io/badge/Google_Safe_Browsing-v4_API-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://safebrowsing.google.com)
   [![URLhaus](https://img.shields.io/badge/URLhaus-Live_Threat_Feed-D32F2F?style=for-the-badge)](https://urlhaus.abuse.ch)
-
   [![Next.js 15](https://img.shields.io/badge/Next.js_15-React_19-black?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org)
   [![Python](https://img.shields.io/badge/Python-3.12_REST_API-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
   [![SQLite](https://img.shields.io/badge/SQLite-Audited_Store-003B57?style=for-the-badge&logo=sqlite&logoColor=white)](https://sqlite.org)
@@ -298,6 +295,12 @@ The platform is deployed live on Vercel:
 
 ---
 
-## License
+## 📄 License
 
-This project is licensed under the MIT License.
+Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for complete details.
+
+---
+
+<div align="center">
+  <sub>Developed by <a href="https://github.com/MuhammadAreebKhadim">Muhammad Areeb Khadim</a>. Built for researchers, scientists, and engineers worldwide.</sub>
+</div>
