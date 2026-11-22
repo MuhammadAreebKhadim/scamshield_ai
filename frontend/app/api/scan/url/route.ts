@@ -41,6 +41,126 @@ function isPrivateIp(ip: string): boolean {
   );
 }
 
+function extractApexDomain(hostname: string): string {
+  const parts = hostname.toLowerCase().split(".");
+  if (parts.length <= 2) return hostname;
+
+  const twoPartSuffixes = new Set([
+    "co.uk", "org.uk", "gov.uk", "ac.uk",
+    "com.au", "net.au", "org.au", "edu.au",
+    "co.nz", "net.nz", "org.nz",
+    "co.jp", "ne.jp", "or.jp",
+    "com.br", "net.br", "org.br",
+    "com.pk", "org.pk", "edu.pk", "net.pk",
+    "co.in", "net.in", "org.in",
+    "com.sg", "org.sg", "com.my", "com.tr"
+  ]);
+
+  const lastTwo = parts.slice(-2).join(".");
+  if (twoPartSuffixes.has(lastTwo) && parts.length >= 3) {
+    return parts.slice(-3).join(".");
+  }
+
+  return parts.slice(-2).join(".");
+}
+
+interface DomainAgeResult {
+  status: string;
+  age_days: number | null;
+  registration_date: string | null;
+  is_new: boolean;
+  message: string;
+  detail?: string;
+  source?: string;
+}
+
+async function fetchDomainAge(hostname: string, isIp: boolean, vtApiKey?: string): Promise<DomainAgeResult> {
+  if (isIp) {
+    return {
+      status: "skipped",
+      age_days: null,
+      registration_date: null,
+      is_new: false,
+      message: "N/A — Direct IP Host",
+      detail: "Target is a raw numeric IP address without RDAP domain registration."
+    };
+  }
+
+  const domain = extractApexDomain(hostname);
+
+  // 1. Primary: RDAP registry lookups with standard browser User-Agent
+  try {
+    const res = await fetch(`https://rdap.org/domain/${domain}`, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "application/json"
+      },
+      signal: AbortSignal.timeout(3500)
+    });
+    if (res.ok) {
+      const json = await res.json();
+      const events = json.events || [];
+      const reg = events.find((e: any) => ["registration", "created"].includes(e.eventAction));
+      if (reg?.eventDate) {
+        const regDate = new Date(reg.eventDate);
+        if (!isNaN(regDate.getTime())) {
+          const ageDays = Math.max(0, Math.floor((Date.now() - regDate.getTime()) / (1000 * 60 * 60 * 24)));
+          const isNew = ageDays < 30;
+          return {
+            status: "success",
+            age_days: ageDays,
+            registration_date: regDate.toISOString().split("T")[0],
+            is_new: isNew,
+            message: `Registered ${ageDays} days ago (${regDate.toISOString().split("T")[0]})`,
+            detail: "Domain registration verified via authoritative RDAP registry records.",
+            source: "RDAP"
+          };
+        }
+      }
+    }
+  } catch {
+    // Proceed to fallback
+  }
+
+  // 2. Fallback: VirusTotal domain creation date
+  if (vtApiKey) {
+    try {
+      const res = await fetch(`https://www.virustotal.com/api/v3/domains/${domain}`, {
+        headers: { "x-apikey": vtApiKey },
+        signal: AbortSignal.timeout(3500)
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const cDate = json?.data?.attributes?.creation_date;
+        if (cDate) {
+          const regDate = new Date(cDate * 1000);
+          const ageDays = Math.max(0, Math.floor((Date.now() - regDate.getTime()) / (1000 * 60 * 60 * 24)));
+          const isNew = ageDays < 30;
+          return {
+            status: "success",
+            age_days: ageDays,
+            registration_date: regDate.toISOString().split("T")[0],
+            is_new: isNew,
+            message: `Registered ${ageDays} days ago (${regDate.toISOString().split("T")[0]})`,
+            detail: "Domain registration verified via VirusTotal registry telemetry.",
+            source: "VirusTotal"
+          };
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  return {
+    status: "unavailable",
+    age_days: null,
+    registration_date: null,
+    is_new: false,
+    message: "Unavailable — Registration data not retrieved."
+  };
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
@@ -71,12 +191,12 @@ export async function POST(req: Request) {
     const pathname = (urlObj.pathname + urlObj.search).toLowerCase();
 
     // Parse host elements
+    const apexDomain = extractApexDomain(hostname);
     const parts = hostname.split(".");
-    let domain = hostname;
+    let domain = apexDomain;
     let subdomain = "";
     if (parts.length > 2) {
-      domain = parts.slice(-2).join(".");
-      subdomain = parts.slice(0, -2).join(".");
+      subdomain = parts.slice(0, parts.length - apexDomain.split(".").length).join(".");
     }
 
     const isIp = /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname) || hostname.includes(":");
@@ -108,8 +228,8 @@ export async function POST(req: Request) {
     const detectedKeywords = SUSPICIOUS_KEYWORDS.filter(k => hostname.includes(k) || pathname.includes(k));
     const onlyAuth = detectedKeywords.length === 1 && (detectedKeywords[0] === "login" || detectedKeywords[0] === "signin");
 
-    // External threat lookups in parallel
-    const [uhResult, vtResult, gsbResult, groqResult] = await Promise.allSettled([
+    // External threat lookups and domain age in parallel
+    const [uhResult, vtResult, gsbResult, groqResult, ageResult] = await Promise.allSettled([
       // 1. URLhaus
       (async () => {
         const uhApiKey = process.env.URLHAUS_API_KEY;
@@ -239,13 +359,19 @@ export async function POST(req: Request) {
           return parsed;
         }
         return null;
-      })()
+      })(),
+
+      // 5. Authoritative Domain Age
+      fetchDomainAge(hostname, isIp, process.env.VIRUSTOTAL_API_KEY)
     ]);
 
     const urlhaus = uhResult.status === "fulfilled" ? uhResult.value : { status: "Clean / Not Listed", is_malicious: false, threat: "None detected", url_status: "N/A" };
     const virustotal = vtResult.status === "fulfilled" ? vtResult.value : { status: "Query Completed", malicious: 0, suspicious: 0, harmless: 58, undetected: 35, total_vendors: 93, summary: "Clean evaluation" };
     const gsb = gsbResult.status === "fulfilled" ? gsbResult.value : { status: "Evaluated", is_threat_found: false, threat_types: [], summary: "No matching threat" };
     const ai = groqResult.status === "fulfilled" ? groqResult.value : null;
+    const domainAge: DomainAgeResult = ageResult.status === "fulfilled"
+      ? ageResult.value
+      : { status: "unavailable", age_days: null, registration_date: null, is_new: false, message: "Unavailable — Registration data not retrieved." };
 
     // Calculate score & indicators
     let score = 0;
@@ -379,7 +505,24 @@ export async function POST(req: Request) {
       }
     }
 
-    // 6. Direct IP host
+    // 6. Recently Registered Domain Check
+    if (domainAge.is_new && domainAge.age_days !== null) {
+      score += 15;
+      calculationItems.push({
+        factor: "Recently Registered Domain (<30 Days)",
+        points: 15,
+        description: `Domain was registered only ${domainAge.age_days} days ago on ${domainAge.registration_date}. Disposable phishing websites are almost universally younger than 30 days.`
+      });
+      indicators.push({
+        name: "Recently Registered Domain",
+        evidence: `Target domain registered only ${domainAge.age_days} days ago (${domainAge.registration_date})`,
+        severity: "HIGH",
+        category: "Domain Age",
+        description: "Recently registered domains exhibit a very high correlation with disposable phishing and credential harvesting campaigns."
+      });
+    }
+
+    // 7. Direct IP host
     if (isIp) {
       const ipPoints = isPrivate ? 10 : 20;
       score += ipPoints;
@@ -396,7 +539,7 @@ export async function POST(req: Request) {
       });
     }
 
-    // 7. Punycode
+    // 8. Punycode
     if (isPunycode) {
       score += 25;
       calculationItems.push({
@@ -412,7 +555,7 @@ export async function POST(req: Request) {
       });
     }
 
-    // 8. URL shortener
+    // 9. URL shortener
     if (isShortened) {
       score += 15;
       calculationItems.push({
@@ -428,7 +571,7 @@ export async function POST(req: Request) {
       });
     }
 
-    // 9. AI Forensics Blend
+    // 10. AI Forensics Blend
     if (ai?.risk_score) {
       const aiScore = Number(ai.risk_score);
       if (aiScore >= 70) {
@@ -505,11 +648,7 @@ export async function POST(req: Request) {
           ? "Cleartext HTTP. Data unencrypted in transit. Sensitive credentials subject to interception."
           : "Encrypted in transit. Does NOT guarantee website authenticity."
       },
-      domain_age: {
-        age_days: null,
-        is_new: false,
-        message: isIp ? "N/A — Direct IP Host" : "Unavailable — Registration data not retrieved."
-      },
+      domain_age: domainAge,
       brand_check: {
         impersonation_detected: Boolean(impersonatedBrand),
         impersonated_brand: impersonatedBrand,
