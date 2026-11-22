@@ -89,61 +89,73 @@ class DatabaseManager:
         return self._row_to_scan(row)
 
     def get_recent_scans(self, limit: int = 50, user_id: Optional[str] = None) -> List[ScanRecord]:
-        if not user_id or user_id == "anonymous":
-            return []
-
         conn = sqlite3.connect(SQLITE_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
-        cursor.execute("""
-            SELECT * FROM scans 
-            WHERE user_id = ? OR user_email = ? 
-            ORDER BY created_at DESC LIMIT ?
-        """, (user_id, user_id, limit))
+        if user_id and user_id != "anonymous":
+            cursor.execute("""
+                SELECT * FROM scans 
+                WHERE LOWER(user_id) = LOWER(?) OR LOWER(user_email) = LOWER(?) 
+                ORDER BY created_at DESC LIMIT ?
+            """, (user_id, user_id, limit))
+        else:
+            cursor.execute("""
+                SELECT * FROM scans 
+                WHERE user_id = 'anonymous' OR user_id IS NULL OR user_id = ''
+                ORDER BY created_at DESC LIMIT ?
+            """, (limit,))
         rows = cursor.fetchall()
         conn.close()
         return [self._row_to_scan(r) for r in rows]
 
     def get_dashboard_stats(self, user_id: Optional[str] = None) -> DashboardStats:
-        if not user_id or user_id == "anonymous":
-            return DashboardStats(
-                total_scans=0,
-                high_risk_detections=0,
-                suspicious_detections=0,
-                caution_detections=0,
-                safe_detections=0,
-                recent_scans=[],
-                threat_categories={
-                    "Phishing & Suspicious URLs": 0,
-                    "Email & Message Forensics": 0,
-                    "Recruitment Verifications": 0,
-                    "High-Risk Critical Alerts": 0,
-                    "Verified Safe": 0
-                }
-            )
-
         conn = sqlite3.connect(SQLITE_PATH)
         cursor = conn.cursor()
 
-        cursor.execute("SELECT COUNT(*) FROM scans WHERE user_id = ? OR user_email = ?", (user_id, user_id))
-        total = cursor.fetchone()[0]
-        cursor.execute("SELECT COUNT(*) FROM scans WHERE (user_id = ? OR user_email = ?) AND risk_level = 'HIGH'", (user_id, user_id))
-        high = cursor.fetchone()[0]
-        cursor.execute("SELECT COUNT(*) FROM scans WHERE (user_id = ? OR user_email = ?) AND risk_level = 'SUSPICIOUS'", (user_id, user_id))
-        suspicious = cursor.fetchone()[0]
-        cursor.execute("SELECT COUNT(*) FROM scans WHERE (user_id = ? OR user_email = ?) AND risk_level = 'CAUTION'", (user_id, user_id))
-        caution = cursor.fetchone()[0]
-        cursor.execute("SELECT COUNT(*) FROM scans WHERE (user_id = ? OR user_email = ?) AND risk_level = 'LOW'", (user_id, user_id))
-        safe = cursor.fetchone()[0]
+        if user_id and user_id != "anonymous":
+            cursor.execute("SELECT COUNT(*) FROM scans WHERE LOWER(user_id) = LOWER(?) OR LOWER(user_email) = LOWER(?)", (user_id, user_id))
+            total = cursor.fetchone()[0]
+            cursor.execute("SELECT COUNT(*) FROM scans WHERE (LOWER(user_id) = LOWER(?) OR LOWER(user_email) = LOWER(?)) AND risk_level = 'HIGH'", (user_id, user_id))
+            high = cursor.fetchone()[0]
+            cursor.execute("SELECT COUNT(*) FROM scans WHERE (LOWER(user_id) = LOWER(?) OR LOWER(user_email) = LOWER(?)) AND risk_level = 'SUSPICIOUS'", (user_id, user_id))
+            suspicious = cursor.fetchone()[0]
+            cursor.execute("SELECT COUNT(*) FROM scans WHERE (LOWER(user_id) = LOWER(?) OR LOWER(user_email) = LOWER(?)) AND risk_level = 'CAUTION'", (user_id, user_id))
+            caution = cursor.fetchone()[0]
+            cursor.execute("SELECT COUNT(*) FROM scans WHERE (LOWER(user_id) = LOWER(?) OR LOWER(user_email) = LOWER(?)) AND risk_level = 'LOW'", (user_id, user_id))
+            safe = cursor.fetchone()[0]
 
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM scans WHERE user_id = ? OR user_email = ? ORDER BY created_at DESC LIMIT 10", (user_id, user_id))
-        recent = [self._row_to_scan(r).to_dict() for r in cursor.fetchall()]
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM scans WHERE LOWER(user_id) = LOWER(?) OR LOWER(user_email) = LOWER(?) ORDER BY created_at DESC LIMIT 10", (user_id, user_id))
+            recent = [self._row_to_scan(r).to_dict() for r in cursor.fetchall()]
 
-        # Real threat category counts for this specific user
-        cursor.execute("SELECT input_type, COUNT(*) FROM scans WHERE user_id = ? OR user_email = ? GROUP BY input_type", (user_id, user_id))
-        type_counts = dict(cursor.fetchall())
+            cursor.execute("SELECT input_type, COUNT(*) FROM scans WHERE LOWER(user_id) = LOWER(?) OR LOWER(user_email) = LOWER(?) GROUP BY input_type", (user_id, user_id))
+            type_counts = dict(cursor.fetchall())
+        else:
+            cursor.execute("SELECT COUNT(*) FROM scans WHERE user_id = 'anonymous' OR user_id IS NULL OR user_id = ''")
+            total = cursor.fetchone()[0]
+            cursor.execute("SELECT COUNT(*) FROM scans WHERE (user_id = 'anonymous' OR user_id IS NULL OR user_id = '') AND risk_level = 'HIGH'")
+            high = cursor.fetchone()[0]
+            cursor.execute("SELECT COUNT(*) FROM scans WHERE (user_id = 'anonymous' OR user_id IS NULL OR user_id = '') AND risk_level = 'SUSPICIOUS'")
+            suspicious = cursor.fetchone()[0]
+            cursor.execute("SELECT COUNT(*) FROM scans WHERE (user_id = 'anonymous' OR user_id IS NULL OR user_id = '') AND risk_level = 'CAUTION'")
+            caution = cursor.fetchone()[0]
+            cursor.execute("SELECT COUNT(*) FROM scans WHERE (user_id = 'anonymous' OR user_id IS NULL OR user_id = '') AND risk_level = 'LOW'")
+            safe = cursor.fetchone()[0]
+
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM scans WHERE user_id = 'anonymous' OR user_id IS NULL OR user_id = '' ORDER BY created_at DESC LIMIT 10")
+            recent = [self._row_to_scan(r).to_dict() for r in cursor.fetchall()]
+
+            cursor.execute("SELECT input_type, COUNT(*) FROM scans WHERE user_id = 'anonymous' OR user_id IS NULL OR user_id = '' GROUP BY input_type")
+            type_counts = dict(cursor.fetchall())
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM scans ORDER BY created_at DESC LIMIT 10")
+            recent = [self._row_to_scan(r).to_dict() for r in cursor.fetchall()]
+
+            cursor.execute("SELECT input_type, COUNT(*) FROM scans GROUP BY input_type")
+            type_counts = dict(cursor.fetchall())
 
         categories = {
             "Phishing & Suspicious URLs": type_counts.get("url", 0),

@@ -5,10 +5,11 @@ AUTH_PATH_KEYWORDS = ["login", "signin", "auth", "authenticate", "session", "use
 
 # High-risk financial, social engineering, and credential harvesting keywords
 DECEPTIVE_SUSPICIOUS_KEYWORDS = [
-    "verify", "secure", "account", "password", "update", "banking",
-    "reward", "claim", "free", "payment", "wallet", "confirm",
-    "security", "suspended", "urgent", "bonus", "airdrop", "kyc",
-    "recover", "validation", "support", "billing", "unusual", "locked"
+    "verify", "verification", "secure", "bank", "banking", "account", "password", 
+    "passcode", "update", "reward", "prize", "claim", "free", "payment", "wallet", 
+    "confirm", "confirmation", "security", "suspended", "urgent", "bonus", "airdrop", 
+    "kyc", "recover", "recovery", "validation", "support", "billing", "unusual", 
+    "locked", "unlock", "credential", "otp", "pin", "lottery", "gift", "card"
 ]
 
 def detect_suspicious_keywords(url_data: Dict[str, Any]) -> Dict[str, Any]:

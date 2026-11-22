@@ -15,11 +15,36 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [gisLoaded, setGisLoaded] = useState(false);
+  const [authRequiredNotice, setAuthRequiredNotice] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("notice") === "auth_required") {
+        setAuthRequiredNotice(true);
+      }
+    }
+  }, []);
 
   const completeLogin = () => {
     setSuccess(true);
     if (typeof window !== "undefined") {
       window.dispatchEvent(new Event("auth_change"));
+      const pending = sessionStorage.getItem("scamshield_pending_scan");
+      if (pending) {
+        sessionStorage.removeItem("scamshield_pending_scan");
+        const trimmed = pending.trim();
+        setTimeout(() => {
+          if (trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.includes("www.") || (trimmed.includes(".") && !trimmed.includes(" "))) {
+            router.push(`/scan/url?target=${encodeURIComponent(trimmed)}`);
+          } else if (trimmed.toLowerCase().includes("hiring") || trimmed.toLowerCase().includes("position") || trimmed.toLowerCase().includes("intern") || trimmed.toLowerCase().includes("salary")) {
+            router.push(`/scan/job?desc=${encodeURIComponent(trimmed)}`);
+          } else {
+            router.push(`/scan/message?content=${encodeURIComponent(trimmed)}`);
+          }
+        }, 350);
+        return;
+      }
       setTimeout(() => {
         router.push("/dashboard");
       }, 350);
@@ -164,6 +189,13 @@ export default function LoginPage() {
           <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
             Sign in to access threat intelligence, link &amp; message forensics, and historical telemetry.
           </p>
+
+          {authRequiredNotice && (
+            <div className="mt-4 p-3.5 rounded-xl border border-cyan-500/30 bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 text-cyan-500" />
+              <span>Authentication required: Please sign in or create an account to run security scans and access AI threat forensics.</span>
+            </div>
+          )}
         </div>
 
         {/* Error notification */}

@@ -18,11 +18,25 @@ import {
 export default function HomePage() {
   const router = useRouter();
   const [quickInput, setQuickInput] = useState("");
+  const [authNotice, setAuthNotice] = useState<string | null>(null);
 
   const handleQuickScan = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = quickInput.trim();
     if (!trimmed) return;
+
+    // Check authentication: restrict anonymous scans from home bar and demand sign-in
+    const token = typeof window !== "undefined" ? localStorage.getItem("scamshield_token") : null;
+    if (!token) {
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("scamshield_pending_scan", trimmed);
+      }
+      setAuthNotice("Authentication required: Please sign in first to analyze this link or content.");
+      setTimeout(() => {
+        router.push("/login?notice=auth_required");
+      }, 1000);
+      return;
+    }
 
     if (trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.includes("www.") || (trimmed.includes(".") && !trimmed.includes(" "))) {
       router.push(`/scan/url?target=${encodeURIComponent(trimmed)}`);
@@ -84,6 +98,20 @@ export default function HomePage() {
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
+            {authNotice && (
+              <div className="mt-4 p-3.5 sm:p-4 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 text-xs sm:text-sm font-medium flex items-center justify-between gap-3 text-left animate-fadeIn">
+                <div className="flex items-center gap-2">
+                  <ShieldAlert className="w-4 h-4 flex-shrink-0 text-rose-500" />
+                  <span>{authNotice}</span>
+                </div>
+                <Link
+                  href="/login?notice=auth_required"
+                  className="px-3 py-1.5 rounded-lg bg-rose-500 text-white text-xs font-semibold hover:bg-rose-600 transition-colors whitespace-nowrap"
+                >
+                  Sign In
+                </Link>
+              </div>
+            )}
             <div className="flex items-center justify-center gap-4 sm:gap-6 mt-3 text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-mono">
               <span>Auto-detects: Links</span>
               <span>Messages</span>

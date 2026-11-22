@@ -166,7 +166,17 @@ export async function POST(req: Request) {
         recommendation: recommendations[0]
       },
       recommendations,
-      score_breakdown: { factors: indicators.map(i => ({ factor: i.name, severity: i.severity })) },
+      score_breakdown: {
+        final_score: finalScore,
+        risk_level: riskLevel,
+        is_threat_confirmed: isThreatConfirmed,
+        calculation_items: indicators.map(i => ({
+          factor: i.name,
+          points: i.severity === "CRITICAL" ? 35 : (i.severity === "HIGH" ? 25 : 15),
+          description: i.evidence || i.description || "Identified recruitment risk indicator"
+        })),
+        formula: `Evaluated ${indicators.length} recruitment indicators = ${finalScore}/100`
+      },
       created_at: new Date().toISOString()
     };
 

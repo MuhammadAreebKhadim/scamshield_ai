@@ -94,6 +94,10 @@ def scan_url_service(url: str, user_id: Optional[str] = None, user_email: Option
     vt_malicious = vt_res.get("malicious", 0)
     vt_total = vt_res.get("total_vendors", 60) or 60
 
+    subdomain_str = (url_data.get("subdomain") or "").lower()
+    subdomain_spoofing = any(tok in subdomain_str for tok in ["bank", "verify", "verification", "secure", "login", "signin", "account", "claim", "prize"])
+    is_http_insecure = not url_data.get("is_https", True)
+
     signals: Dict[str, Any] = {
         "urlhaus_match": urlhaus_res.get("is_malicious", False),
         "google_match": gsb_res.get("is_threat_found", False),
@@ -110,6 +114,8 @@ def scan_url_service(url: str, user_id: Optional[str] = None, user_email: Option
         "detected_keywords": kw_result.get("detected_keywords", []),
         "ip_based": ip_result["is_ip"],
         "is_private_ip": ip_result.get("is_private", False),
+        "subdomain_spoofing": subdomain_spoofing,
+        "is_http": is_http_insecure,
         "ai_score": ai_res.get("risk_score", 0)
     }
 
@@ -155,6 +161,22 @@ def scan_url_service(url: str, user_id: Optional[str] = None, user_email: Option
             "evidence": f"{brand_result['reason']} (Similarity match: {brand_result.get('similarity_percentage', 0)}%)",
             "severity": brand_result["severity"],
             "category": "Domain Heuristics"
+        })
+
+    if subdomain_spoofing:
+        indicators.append({
+            "name": "Deceptive Financial Subdomain Spoofing",
+            "evidence": f"Subdomain '{url_data.get('subdomain')}' mimics high-trust banking/verification portals on domain '{domain}'.",
+            "severity": "CRITICAL",
+            "category": "Domain Heuristics"
+        })
+
+    if is_http_insecure and (signals.get("suspicious_keywords") or subdomain_spoofing or brand_result["impersonation_detected"]):
+        indicators.append({
+            "name": "Cleartext HTTP on Sensitive Portal",
+            "evidence": "Target transmits credential and security verification data over unencrypted cleartext HTTP.",
+            "severity": "HIGH",
+            "category": "Protocol Analysis"
         })
 
     # 4. URL Shortener

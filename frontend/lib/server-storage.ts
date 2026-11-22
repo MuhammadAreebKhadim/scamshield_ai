@@ -135,9 +135,18 @@ export const serverStorage = {
 
   getRecentScans(limit: number = 50, userId?: string, email?: string): ScanRecord[] {
     loadStore();
+    const normalizedUserId = (userId || "").toLowerCase();
+    const normalizedEmail = (email || "").toLowerCase();
+
     let list = inMemoryStore.scans;
-    if (userId && userId !== "anonymous") {
-      list = list.filter(s => s.user_id === userId || s.user_email === email || s.user_id === email);
+    if (normalizedUserId && normalizedUserId !== "anonymous") {
+      list = list.filter(s => {
+        const sUser = (s.user_id || "").toLowerCase();
+        const sEmail = (s.user_email || "").toLowerCase();
+        return sUser === normalizedUserId || sEmail === normalizedEmail || sUser === normalizedEmail;
+      });
+    } else {
+      list = list.filter(s => !s.user_id || s.user_id === "anonymous");
     }
     return list.slice(0, limit);
   },
@@ -145,9 +154,16 @@ export const serverStorage = {
   getDashboardStats(userId?: string, email?: string): DashboardStats {
     loadStore();
     const isUserLogged = Boolean(userId && userId !== "anonymous");
+    const normalizedUserId = (userId || "").toLowerCase();
+    const normalizedEmail = (email || "").toLowerCase();
+
     const userScans = isUserLogged
-      ? inMemoryStore.scans.filter(s => s.user_id === userId || s.user_email === email || s.user_id === email)
-      : [];
+      ? inMemoryStore.scans.filter(s => {
+          const sUser = (s.user_id || "").toLowerCase();
+          const sEmail = (s.user_email || "").toLowerCase();
+          return sUser === normalizedUserId || sEmail === normalizedEmail || sUser === normalizedEmail;
+        })
+      : inMemoryStore.scans.filter(s => !s.user_id || s.user_id === "anonymous");
 
     const total = userScans.length;
     const high = userScans.filter(s => s.risk_level === "HIGH").length;

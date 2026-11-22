@@ -99,6 +99,26 @@ def calculate_risk_score(signals: Dict[str, Any]) -> Tuple[int, str, bool, Dict[
                 "description": "URL uses a raw public IP address without domain name registration or authoritative DNS."
             })
 
+    # Subdomain spoofing
+    if signals.get("subdomain_spoofing"):
+        points = 30
+        score += points
+        breakdown_items.append({
+            "factor": "Deceptive Financial Subdomain Spoofing",
+            "points": points,
+            "description": "Host uses a deceptive bank/security subdomain prefix on an unrelated or unverified domain."
+        })
+
+    # Insecure cleartext HTTP for sensitive portals
+    if signals.get("is_http") and (signals.get("suspicious_keywords") or signals.get("brand_impersonation") or signals.get("subdomain_spoofing")):
+        points = 25
+        score += points
+        breakdown_items.append({
+            "factor": "Insecure Cleartext Protocol for Sensitive Target",
+            "points": points,
+            "description": "Target transmits login or banking authentication parameters over unencrypted cleartext HTTP."
+        })
+
     # Keyword detection for URLs
     if signals.get("suspicious_keywords"):
         if signals.get("only_auth_keyword"):
@@ -110,12 +130,13 @@ def calculate_risk_score(signals: Dict[str, Any]) -> Tuple[int, str, bool, Dict[
                 "description": "Standard login/signin keyword found in URL path. Normal for web portals; minimal risk contribution on its own."
             })
         else:
-            points = 5
+            kws = signals.get("detected_keywords", [])
+            points = min(len(kws) * 8, 25)
             score += points
             breakdown_items.append({
-                "factor": "Deceptive Phishing / Financial Keywords",
+                "factor": f"Deceptive Phishing / Financial Keywords ({len(kws)} detected)",
                 "points": points,
-                "description": f"High-risk terms detected: {', '.join(signals.get('detected_keywords', [])[:3])}"
+                "description": f"High-risk terms detected: {', '.join(kws[:5])}"
             })
 
     # 3. Message & Social Engineering Phishing Heuristics
@@ -220,7 +241,15 @@ def calculate_risk_score(signals: Dict[str, Any]) -> Tuple[int, str, bool, Dict[
 
     # 4. AI Forensics Blend
     ai_score = signals.get("ai_score", 0)
-    if ai_score > 0 and score < 70:
+    if ai_score >= 70:
+        ai_contribution = min(int(ai_score * 0.35), 30)
+        score += ai_contribution
+        breakdown_items.append({
+            "factor": "AI Contextual Forensics (High Risk Phishing Intent)",
+            "points": ai_contribution,
+            "description": f"Groq AI intent model scored {ai_score}/100 detecting deceptive phishing or credential theft patterns."
+        })
+    elif ai_score > 0 and score < 70:
         ai_contribution = min(int(ai_score * 0.3), 20)
         if ai_contribution > 0:
             score += ai_contribution

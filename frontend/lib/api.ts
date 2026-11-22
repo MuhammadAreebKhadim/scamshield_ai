@@ -109,6 +109,47 @@ export interface UserProfile {
   created_at: string;
 }
 
+function getClientScansKey(): string {
+  if (typeof window === "undefined") return "scamshield_client_scans_guest";
+  try {
+    const userRaw = localStorage.getItem("scamshield_user");
+    if (userRaw) {
+      const u = JSON.parse(userRaw);
+      if (u?.email) {
+        return `scamshield_client_scans_${encodeURIComponent(u.email.toLowerCase().trim())}`;
+      }
+      if (u?.user_id) {
+        return `scamshield_client_scans_${encodeURIComponent(u.user_id.toLowerCase().trim())}`;
+      }
+    }
+  } catch {}
+  return "scamshield_client_scans_guest";
+}
+
+export function getLocalScans(): ScanRecord[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const key = getClientScansKey();
+    const raw = localStorage.getItem(key);
+    if (!raw) return [];
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+export function saveLocalScan(scan: ScanRecord): void {
+  if (typeof window === "undefined" || !scan?.scan_id) return;
+  try {
+    const key = getClientScansKey();
+    const current = getLocalScans();
+    const updated = [scan, ...current.filter(s => s.scan_id !== scan.scan_id)].slice(0, 100);
+    localStorage.setItem(key, JSON.stringify(updated));
+  } catch (e) {
+    console.warn("Could not save scan to localStorage", e);
+  }
+}
+
 export const api = {
   async scanURL(url: string): Promise<ScanRecord> {
     const res = await fetch(`${getApiBase()}/scan/url`, {
@@ -120,7 +161,9 @@ export const api = {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.error || "Failed to scan URL");
     }
-    return res.json();
+    const data: ScanRecord = await res.json();
+    saveLocalScan(data);
+    return data;
   },
 
   async scanMessage(content: string, channel: string = "Email"): Promise<ScanRecord> {
@@ -133,7 +176,9 @@ export const api = {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.error || "Failed to analyze message");
     }
-    return res.json();
+    const data: ScanRecord = await res.json();
+    saveLocalScan(data);
+    return data;
   },
 
   async scanJob(payload: {
@@ -156,7 +201,9 @@ export const api = {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.error || "Failed to verify job offer");
     }
-    return res.json();
+    const data: ScanRecord = await res.json();
+    saveLocalScan(data);
+    return data;
   },
 
   async getHistory(params?: {
@@ -169,27 +216,122 @@ export const api = {
     if (params?.type) q.set("type", params.type);
     if (params?.risk_level) q.set("risk_level", params.risk_level);
 
-    const res = await fetch(`${getApiBase()}/scan/history?${q.toString()}`, {
-      headers: getAuthHeaders(),
-    });
-    if (!res.ok) throw new Error("Failed to load scan history");
-    return res.json();
+    let serverScans: ScanRecord[] = [];
+    try {
+      const res = await fetch(`${getApiBase()}/scan/history?${q.toString()}`, {
+        headers: getAuthHeaders(),
+      });
+      if (res.ok) {
+        serverScans = await res.json();
+      }
+    } catch {
+      // server fetch error, fallback to client
+    }
+
+    // Merge server scans and client scans, deduplicated by scan_id
+    const localScans = getLocalScans();
+    const map = new Map<string, ScanRecord>();
+    for (const s of localScans) {
+      if (s?.scan_id) map.set(s.scan_id, s);
+    }
+    for (const s of serverScans) {
+      if (s?.scan_id) map.set(s.scan_id, s);
+    }
+
+    let merged = Array.from(map.values()).sort(
+      (a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+    );
+
+    if (params?.type) {
+      merged = merged.filter(s => s.input_type?.toLowerCase() === params.type?.toLowerCase());
+    }
+    if (params?.risk_level) {
+      merged = merged.filter(s => s.risk_level?.toUpperCase() === params.risk_level?.toUpperCase());
+    }
+    if (params?.limit) {
+      merged = merged.slice(0, params.limit);
+    }
+    return merged;
   },
 
   async getScan(scanId: string): Promise<ScanRecord> {
-    const res = await fetch(`${getApiBase()}/scan/${scanId}`, {
-      headers: getAuthHeaders(),
-    });
-    if (!res.ok) throw new Error("Scan report not found");
-    return res.json();
+    try {
+      const res = await fetch(`${getApiBase()}/scan/${scanId}`, {
+        headers: getAuthHeaders(),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        saveLocalScan(data);
+        return data;
+      }
+    } catch {
+      // fallback
+    }
+
+    const local = getLocalScans().find(s => s.scan_id === scanId);
+    if (local) return local;
+
+    throw new Error("Scan report not found");
   },
 
   async getDashboardStats(): Promise<DashboardStats> {
-    const res = await fetch(`${getApiBase()}/dashboard/stats`, {
-      headers: getAuthHeaders(),
-    });
-    if (!res.ok) throw new Error("Failed to load dashboard metrics");
-    return res.json();
+    let stats: DashboardStats | null = null;
+    try {
+      const res = await fetch(`${getApiBase()}/dashboard/stats`, {
+        headers: getAuthHeaders(),
+      });
+      if (res.ok) {
+        stats = await res.json();
+      }
+    } catch {
+      // fallback
+    }
+
+    const localScans = getLocalScans();
+    if (!stats || (stats.total_scans === 0 && localScans.length > 0)) {
+      const total = localScans.length;
+      const high = localScans.filter(s => s.risk_level === "HIGH").length;
+      const suspicious = localScans.filter(s => s.risk_level === "SUSPICIOUS").length;
+      const caution = localScans.filter(s => s.risk_level === "CAUTION").length;
+      const safe = localScans.filter(s => s.risk_level === "LOW").length;
+
+      return {
+        total_scans: total,
+        high_risk_detections: high,
+        suspicious_detections: suspicious,
+        caution_detections: caution,
+        safe_detections: safe,
+        recent_scans: localScans.slice(0, 10),
+        threat_categories: {
+          "Phishing & Suspicious URLs": localScans.filter(s => s.input_type === "url").length,
+          "Email & Message Forensics": localScans.filter(s => s.input_type === "message").length,
+          "Recruitment Verifications": localScans.filter(s => s.input_type === "job").length,
+          "High-Risk Critical Alerts": high,
+          "Verified Safe": safe
+        }
+      };
+    }
+
+    // Merge recent scans with local scans if any are missing
+    const map = new Map<string, ScanRecord>();
+    for (const s of localScans) {
+      if (s?.scan_id) map.set(s.scan_id, s);
+    }
+    for (const s of (stats.recent_scans || [])) {
+      if (s?.scan_id) map.set(s.scan_id, s);
+    }
+    const all = Array.from(map.values()).sort(
+      (a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+    );
+
+    stats.total_scans = Math.max(stats.total_scans, all.length);
+    stats.high_risk_detections = all.filter(s => s.risk_level === "HIGH").length;
+    stats.suspicious_detections = all.filter(s => s.risk_level === "SUSPICIOUS").length;
+    stats.caution_detections = all.filter(s => s.risk_level === "CAUTION").length;
+    stats.safe_detections = all.filter(s => s.risk_level === "LOW").length;
+    stats.recent_scans = all.slice(0, 10);
+
+    return stats;
   },
 
   async googleAuth(credential: string): Promise<{ access_token: string; user: UserProfile }> {
