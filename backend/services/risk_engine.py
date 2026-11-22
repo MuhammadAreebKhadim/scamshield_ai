@@ -54,13 +54,25 @@ def calculate_risk_score(signals: Dict[str, Any]) -> Tuple[int, str, bool, Dict[
         })
 
     if signals.get("brand_impersonation"):
-        points = 20
+        is_homoglyph = signals.get("brand_severity") == "CRITICAL" or signals.get("is_homoglyph", False)
+        points = 40 if is_homoglyph else 30
         score += points
         breakdown_items.append({
-            "factor": "Brand Impersonation / Typosquatting",
+            "factor": f"Brand Impersonation / Typosquatting ({signals.get('impersonated_brand', 'brand')})",
             "points": points,
-            "description": f"Target mimics a recognized corporate brand ({signals.get('impersonated_brand', 'brand')}) on an unrelated domain."
+            "description": f"Target mimics recognized brand '{signals.get('impersonated_brand', 'brand')}' via deceptive character substitution or homoglyphs on an unauthorized domain."
         })
+        is_threat_confirmed = True
+
+        # Combination heuristic: brand impersonation + sensitive action/credential keywords
+        if signals.get("suspicious_keywords"):
+            combo_points = 25
+            score += combo_points
+            breakdown_items.append({
+                "factor": "Targeted Brand Credential Harvesting Lure",
+                "points": combo_points,
+                "description": f"Domain combines brand impersonation ({signals.get('impersonated_brand')}) with security/credential action keywords to deceive users into submitting private data."
+            })
 
     if signals.get("url_shortener"):
         points = 10
@@ -110,13 +122,45 @@ def calculate_risk_score(signals: Dict[str, Any]) -> Tuple[int, str, bool, Dict[
         })
 
     # Insecure cleartext HTTP for sensitive portals
-    if signals.get("is_http") and (signals.get("suspicious_keywords") or signals.get("brand_impersonation") or signals.get("subdomain_spoofing")):
+    if signals.get("is_http") and (signals.get("suspicious_keywords") or signals.get("brand_impersonation") or signals.get("subdomain_spoofing") or signals.get("is_financial_phishing") or signals.get("is_prize_scam")):
         points = 25
         score += points
         breakdown_items.append({
             "factor": "Insecure Cleartext Protocol for Sensitive Target",
             "points": points,
-            "description": "Target transmits login or banking authentication parameters over unencrypted cleartext HTTP."
+            "description": "Target transmits login, prize claim, or banking authentication parameters over unencrypted cleartext HTTP."
+        })
+
+    # Financial Phishing Lure Combination
+    if signals.get("is_financial_phishing"):
+        points = 35
+        score += points
+        breakdown_items.append({
+            "factor": "Financial Phishing Lure Combination",
+            "points": points,
+            "description": "URL pairs banking tokens with urgent security/verification action terms. Hallmark signature of financial credential harvesting."
+        })
+        is_threat_confirmed = True
+
+    # Prize / Advance-Fee Scam Vector
+    if signals.get("is_prize_scam"):
+        points = 35
+        score += points
+        breakdown_items.append({
+            "factor": "Prize / Advance-Fee Scam Vector",
+            "points": points,
+            "description": "URL structure promotes lottery or prize lures paired with sensitive or unencrypted channels. Classic signature of advance-fee fraud."
+        })
+        is_threat_confirmed = True
+
+    # Deceptive Compound Host Formulation
+    if signals.get("has_compound_deception") and not signals.get("brand_impersonation"):
+        points = 25
+        score += points
+        breakdown_items.append({
+            "factor": "Deceptive Compound Host Formulation",
+            "points": points,
+            "description": "Host structure strings multiple deception tokens together. Typical of synthetic phishing domain generation."
         })
 
     # Keyword detection for URLs

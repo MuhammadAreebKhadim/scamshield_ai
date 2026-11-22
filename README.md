@@ -1,39 +1,43 @@
 <div align="center">
 
-  <img src="assets/logo.svg" alt="ScamShield AI Precision Cyber Shield Logo" width="80" height="80" />
+  <img src="assets/logo.svg" alt="ScamShield AI Precision Cyber Shield Logo" width="84" height="84" />
 
   # ScamShield AI
-  ### CYBERSECURITY THREAT OPERATIONS & FRAUD INTELLIGENCE PLATFORM
+  ### CYBER DEFENSE OPERATIONS & FRAUD INTELLIGENCE PLATFORM
 
-  **Unified Threat Detection & Forensic Analysis for Malicious Links, Phishing Clones, & Digital Deception**
+  **Next-Generation Multi-Engine Security Platform for URL Threat Intelligence, Phishing Interception, & Fraud Forensics**
 
   <br />
 
-  [![Live Production](https://img.shields.io/badge/▲_LIVE_PRODUCTION-SCAMSHIELD--AI--WELD--PI.VERCEL.APP-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://scamshield-ai-weld-pi.vercel.app)
+  [![Live Production](https://img.shields.io/badge/%E2%96%B2_LIVE_PRODUCTION-SCAMSHIELD--AI--WELD--PI.VERCEL.APP-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://scamshield-ai-weld-pi.vercel.app)
   <br />
   
-  [![Stars](https://img.shields.io/github/stars/MuhammadAreebKhadim/scamshield_ai?style=for-the-badge&color=0066FF)](https://github.com/MuhammadAreebKhadim/scamshield_ai/stargazers)
-  [![Forks](https://img.shields.io/github/forks/MuhammadAreebKhadim/scamshield_ai?style=for-the-badge&color=00F2FE)](https://github.com/MuhammadAreebKhadim/scamshield_ai/network/members)
-  [![Issues](https://img.shields.io/github/issues/MuhammadAreebKhadim/scamshield_ai?style=for-the-badge&color=10B981)](https://github.com/MuhammadAreebKhadim/scamshield_ai/issues)
-  [![License](https://img.shields.io/badge/LICENSE-MIT-0284C7?style=for-the-badge)](LICENSE)
+  [![Stars](https://img.shields.io/github/stars/MuhammadAreebKhadim/scamshield_ai?style=for-the-badge&color=4F46E5)](https://github.com/MuhammadAreebKhadim/scamshield_ai/stargazers)
+  [![Forks](https://img.shields.io/github/forks/MuhammadAreebKhadim/scamshield_ai?style=for-the-badge&color=0284C7)](https://github.com/MuhammadAreebKhadim/scamshield_ai/network/members)
+  [![Issues](https://img.shields.io/badge/ISSUES-0_OPEN-10B981?style=for-the-badge)](https://github.com/MuhammadAreebKhadim/scamshield_ai/issues)
+  [![License](https://img.shields.io/badge/LICENSE-MIT-06B6D4?style=for-the-badge)](LICENSE)
   <br />
 
-  [![Groq AI](https://img.shields.io/badge/Groq_AI-LLaMA--3.3_70B-F55036?style=for-the-badge&logo=groq&logoColor=white)](https://groq.com)
-  [![VirusTotal](https://img.shields.io/badge/VirusTotal_API-v3_60+_Engines-3949AB?style=for-the-badge&logo=virustotal&logoColor=white)](https://www.virustotal.com)
-  [![Google Safe Browsing](https://img.shields.io/badge/Google_Safe_Browsing-v4_API-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://safebrowsing.google.com)
-  [![URLhaus](https://img.shields.io/badge/URLhaus-Live_Threat_Feed-D32F2F?style=for-the-badge)](https://urlhaus.abuse.ch)
-  [![Next.js 15](https://img.shields.io/badge/Next.js_15-React_19-black?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org)
-  [![Python](https://img.shields.io/badge/Python-3.12_REST_API-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-  [![SQLite](https://img.shields.io/badge/SQLite-Audited_Store-003B57?style=for-the-badge&logo=sqlite&logoColor=white)](https://sqlite.org)
-  [![Google OAuth 2.0](https://img.shields.io/badge/Google_OAuth_2.0-Identity_Services-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/identity)
+  [![Groq AI](https://img.shields.io/badge/Groq_AI-Default_Flagship-4F46E5?style=for-the-badge&logo=groq&logoColor=white)](https://groq.com)
+  [![LLaMA 3.3 70B](https://img.shields.io/badge/LLaMA--3.3_70B-Ultra_Fast_Flagship-10B981?style=for-the-badge)](https://groq.com)
+  [![VirusTotal](https://img.shields.io/badge/VirusTotal_API-70+_Antivirus_Engines-0284C7?style=for-the-badge&logo=virustotal&logoColor=white)](https://www.virustotal.com)
+  [![Google Safe Browsing](https://img.shields.io/badge/Safe_Browsing-Google_Threat_Feed-B91C1C?style=for-the-badge&logo=google&logoColor=white)](https://safebrowsing.google.com)
+  <br />
+
+  [![URLhaus Feed](https://img.shields.io/badge/URLhaus-Abuse.ch_Feed-475569?style=for-the-badge)](https://urlhaus.abuse.ch)
+  [![Next.js 15](https://img.shields.io/badge/Next.js_15-React_19_Tailwind-000000?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org)
+  [![Google OAuth 2.0](https://img.shields.io/badge/Google_OAuth_2.0-Verified_Identity-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/identity)
+  [![Vercel Serverless](https://img.shields.io/badge/%E2%96%B2_Vercel_Serverless-Edge_Cloud_Deployment-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://scamshield-ai-weld-pi.vercel.app)
 
 </div>
 
 ---
 
-<p align="center">
-  <img src="assets/dashboard.png" alt="ScamShield AI Threat Intelligence & Scan Dashboard" width="900" style="border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);" />
-</p>
+<div align="center">
+  <a href="https://scamshield-ai-weld-pi.vercel.app" target="_blank" rel="noopener noreferrer">
+    <img src="assets/dashboard.png" alt="ScamShield AI Threat Intelligence & Forensic Platform" width="920" style="max-width: 100%; height: auto; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);" />
+  </a>
+</div>
 
 ---
 

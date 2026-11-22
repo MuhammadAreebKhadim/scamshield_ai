@@ -95,8 +95,26 @@ def scan_url_service(url: str, user_id: Optional[str] = None, user_email: Option
     vt_total = vt_res.get("total_vendors", 60) or 60
 
     subdomain_str = (url_data.get("subdomain") or "").lower()
-    subdomain_spoofing = any(tok in subdomain_str for tok in ["bank", "verify", "verification", "secure", "login", "signin", "account", "claim", "prize"])
+    subdomain_spoofing = (brand_result["impersonation_detected"] and bool(subdomain_str)) or any(
+        tok in subdomain_str for tok in ["bank", "verify", "verification", "secure", "login", "signin", "account", "claim", "prize", "update", "security", "auth", "support"]
+    )
     is_http_insecure = not url_data.get("is_https", True)
+
+    FINANCIAL_TOKENS = ["bank", "banking", "creditcard", "debitcard", "wire", "wallet", "kyc", "tax", "irs", "payout", "payroll", "invoice", "payment", "billing", "chase", "wellsfargo", "bofa", "citibank", "secure-bank"]
+    URGENCY_ACTION_TOKENS = ["verify", "verification", "secure", "security", "confirm", "confirmation", "suspended", "unusual-activity", "update", "unlock", "restore", "reactivate", "auth", "2fa", "password", "pin", "credential", "security-alert", "helpdesk"]
+    PRIZE_SCAM_TOKENS = ["claim-prize", "claim", "prize", "lottery", "winner", "winning", "lucky", "giveaway", "airdrop", "reward", "jackpot", "congratulations", "free-gift", "claim-now"]
+
+    full_target_lower = f"{url_data.get('hostname', '').lower()}{url_data.get('path', '').lower()}"
+    det_financial = [t for t in FINANCIAL_TOKENS if t in full_target_lower]
+    det_urgency = [t for t in URGENCY_ACTION_TOKENS if t in full_target_lower]
+    det_prize = [t for t in PRIZE_SCAM_TOKENS if t in full_target_lower]
+
+    is_financial_phishing = len(det_financial) > 0 and (len(det_urgency) > 0 or subdomain_spoofing)
+    is_prize_scam = len(det_prize) > 0 and (len(det_financial) > 0 or len(det_urgency) > 0 or is_http_insecure)
+
+    host_parts = url_data.get("hostname", "").lower().split("-")
+    compound_triggers = [p for p in host_parts if any(f in p for f in FINANCIAL_TOKENS + URGENCY_ACTION_TOKENS + PRIZE_SCAM_TOKENS)]
+    has_compound_deception = len(compound_triggers) >= 2
 
     signals: Dict[str, Any] = {
         "urlhaus_match": urlhaus_res.get("is_malicious", False),
@@ -105,6 +123,7 @@ def scan_url_service(url: str, user_id: Optional[str] = None, user_email: Option
         "virustotal_total_count": vt_total,
         "brand_impersonation": brand_result["impersonation_detected"],
         "impersonated_brand": brand_result.get("impersonated_brand"),
+        "brand_severity": brand_result.get("severity", "NONE"),
         "punycode_threat": punycode_result["is_suspicious_homoglyph"],
         "url_shortener": shortener_result["is_shortened"],
         "shortener_service": shortener_result.get("service"),
@@ -116,6 +135,9 @@ def scan_url_service(url: str, user_id: Optional[str] = None, user_email: Option
         "is_private_ip": ip_result.get("is_private", False),
         "subdomain_spoofing": subdomain_spoofing,
         "is_http": is_http_insecure,
+        "is_financial_phishing": is_financial_phishing,
+        "is_prize_scam": is_prize_scam,
+        "has_compound_deception": has_compound_deception,
         "ai_score": ai_res.get("risk_score", 0)
     }
 

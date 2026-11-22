@@ -4,30 +4,219 @@ import { serverStorage, ScanRecord, Indicator } from "@/lib/server-storage";
 
 export const dynamic = "force-dynamic";
 
-const BRAND_PATTERNS: Record<string, string[]> = {
-  "PayPal": ["paypal"],
-  "Microsoft": ["microsoft", "office365", "live.com", "outlook", "msn"],
-  "Apple": ["apple", "icloud", "appleid"],
-  "Amazon": ["amazon", "aws"],
-  "Google": ["google", "gmail", "drive-google"],
-  "Netflix": ["netflix"],
-  "Chase Bank": ["chase", "chasebank"],
-  "Wells Fargo": ["wellsfargo"],
-  "Bank of America": ["bankofamerica", "bofa"],
-  "Binance": ["binance"],
-  "Coinbase": ["coinbase"],
-  "MetaMask": ["metamask"]
+interface BrandInfo {
+  brand: string;
+  legitDomains: string[];
+}
+
+const PROTECTED_BRANDS: Record<string, BrandInfo> = {
+  "paypal": { brand: "PayPal", legitDomains: ["paypal.com", "paypal.me"] },
+  "google": { brand: "Google", legitDomains: ["google.com", "google.co.uk", "google.ca", "gmail.com", "youtube.com"] },
+  "microsoft": { brand: "Microsoft", legitDomains: ["microsoft.com", "office.com", "live.com", "outlook.com", "azure.com", "msn.com"] },
+  "apple": { brand: "Apple", legitDomains: ["apple.com", "icloud.com"] },
+  "amazon": { brand: "Amazon", legitDomains: ["amazon.com", "amazon.co.uk", "amazon.de", "aws.amazon.com"] },
+  "netflix": { brand: "Netflix", legitDomains: ["netflix.com"] },
+  "chase": { brand: "Chase Bank", legitDomains: ["chase.com"] },
+  "wellsfargo": { brand: "Wells Fargo", legitDomains: ["wellsfargo.com"] },
+  "bankofamerica": { brand: "Bank of America", legitDomains: ["bankofamerica.com", "bofa.com"] },
+  "citibank": { brand: "Citibank", legitDomains: ["citi.com", "citibank.com"] },
+  "binance": { brand: "Binance", legitDomains: ["binance.com"] },
+  "coinbase": { brand: "Coinbase", legitDomains: ["coinbase.com"] },
+  "metamask": { brand: "MetaMask", legitDomains: ["metamask.io"] },
+  "facebook": { brand: "Facebook", legitDomains: ["facebook.com", "fb.com", "meta.com", "instagram.com", "whatsapp.com"] },
+  "instagram": { brand: "Instagram", legitDomains: ["instagram.com"] },
+  "whatsapp": { brand: "WhatsApp", legitDomains: ["whatsapp.com"] },
+  "telegram": { brand: "Telegram", legitDomains: ["telegram.org", "t.me"] },
+  "linkedin": { brand: "LinkedIn", legitDomains: ["linkedin.com"] },
+  "twitter": { brand: "Twitter / X", legitDomains: ["twitter.com", "x.com"] },
+  "dhl": { brand: "DHL", legitDomains: ["dhl.com"] },
+  "fedex": { brand: "FedEx", legitDomains: ["fedex.com"] },
+  "ups": { brand: "UPS", legitDomains: ["ups.com"] },
+  "usps": { brand: "USPS", legitDomains: ["usps.com"] }
 };
+
+const CYRILLIC_LOOKALIKES: Record<string, string> = {
+  "\u0430": "a", "\u0410": "a", "\u0432": "b", "\u0441": "c", "\u0421": "c",
+  "\u0434": "d", "\u0435": "e", "\u0425": "x", "\u0445": "x", "\u0456": "i",
+  "\u0458": "j", "\u0455": "s", "\u043e": "o", "\u041e": "o", "\u0440": "p",
+  "\u0420": "p", "\u0443": "y", "\u0423": "y"
+};
+
+const HOMOGLYPH_CHARS: Record<string, string> = {
+  "0": "o", "1": "l", "2": "z", "3": "e", "4": "a", "5": "s",
+  "6": "b", "7": "t", "8": "b", "9": "g", "@": "a", "$": "s", "!": "i", "|": "l"
+};
+
+function normalizeHomoglyphs(str: string): string {
+  let s = str.toLowerCase().replace(/vv/g, "w").replace(/rn/g, "m").replace(/cl/g, "d");
+  // Normalize Unicode diacritics/accents
+  try {
+    s = s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  } catch {}
+  let out = "";
+  for (const ch of s) {
+    if (CYRILLIC_LOOKALIKES[ch]) out += CYRILLIC_LOOKALIKES[ch];
+    else if (HOMOGLYPH_CHARS[ch]) out += HOMOGLYPH_CHARS[ch];
+    else out += ch;
+  }
+  return out;
+}
+
+function decodePunycodeHost(hostname: string): string {
+  if (!hostname.includes("xn--")) return hostname;
+  try {
+    const punycode = require("node:punycode");
+    return punycode.toUnicode(hostname);
+  } catch {
+    return hostname;
+  }
+}
+
+function cleanUserUrl(input: string): string {
+  let s = (input || "").trim();
+  // Strip Markdown link format [label](url)
+  const mdMatch = s.match(/\[.*?\]\((https?:\/\/[^\s\)]+)\)/i);
+  if (mdMatch) {
+    s = mdMatch[1];
+  } else {
+    // Strip wrapping brackets or quotes
+    s = s.replace(/^[\[\(<'\"]+/, "").replace(/[\]\)>'\"]+$/, "").trim();
+  }
+  if (!s.startsWith("http://") && !s.startsWith("https://")) {
+    s = "https://" + s;
+  }
+  return s;
+}
+
+function levenshtein(s1: string, s2: string): number {
+  if (s1 === s2) return 0;
+  if (!s1.length) return s2.length;
+  if (!s2.length) return s1.length;
+  const d: number[][] = [];
+  for (let i = 0; i <= s1.length; i++) d[i] = [i];
+  for (let j = 0; j <= s2.length; j++) d[0][j] = j;
+  for (let i = 1; i <= s1.length; i++) {
+    for (let j = 1; j <= s2.length; j++) {
+      const cost = s1[i - 1] === s2[j - 1] ? 0 : 1;
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + cost);
+    }
+  }
+  return d[s1.length][s2.length];
+}
+
+interface BrandDetectionResult {
+  detected: boolean;
+  brand: string | null;
+  similarity: number;
+  reason: string;
+  severity: "NONE" | "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+  isHomoglyph: boolean;
+  isTyposquat: boolean;
+}
+
+function evaluateBrandImpersonation(
+  hostname: string,
+  apexDomain: string,
+  subdomain: string,
+  decodedHost: string
+): BrandDetectionResult {
+  const host = hostname.toLowerCase();
+  const apex = apexDomain.toLowerCase();
+  const sub = subdomain.toLowerCase();
+  const normHost = normalizeHomoglyphs(decodedHost);
+  const normApex = normalizeHomoglyphs(apex);
+  const normSub = normalizeHomoglyphs(sub);
+
+  const hostTokens = host.split(/[\.\-_]+/).filter(Boolean);
+  const normTokens = normHost.split(/[\.\-_]+/).filter(Boolean);
+
+  for (const [key, info] of Object.entries(PROTECTED_BRANDS)) {
+    const isLegit = info.legitDomains.some(
+      d => apex === d || host === d || host.endsWith("." + d)
+    );
+    if (isLegit) continue;
+
+    // 1. Homoglyph / Leetspeak / Punycode match (e.g. paypa1, g00gle, micr0s0ft, xn--pple-43d)
+    if (normHost.includes(key) && !host.includes(key)) {
+      return {
+        detected: true,
+        brand: info.brand,
+        similarity: 95,
+        reason: `Character substitution / homoglyph masquerading as '${info.brand}'`,
+        severity: "CRITICAL",
+        isHomoglyph: true,
+        isTyposquat: false
+      };
+    }
+
+    // 2. Brand token in subdomain on unauthorized domain (e.g. paypal.com.account-update-alert.xyz, login.microsoft.com.spoof.net)
+    if (sub.includes(key) || normSub.includes(key)) {
+      return {
+        detected: true,
+        brand: info.brand,
+        similarity: 92,
+        reason: `Brand '${info.brand}' placed in subdomain on unrelated domain '${apexDomain}'`,
+        severity: "CRITICAL",
+        isHomoglyph: normSub.includes(key) && !sub.includes(key),
+        isTyposquat: false
+      };
+    }
+
+    // 3. Exact brand embedded in unauthorized registered domain (e.g. paypal-security.xyz)
+    if (apex.includes(key) || normApex.includes(key)) {
+      return {
+        detected: true,
+        brand: info.brand,
+        similarity: 90,
+        reason: `Brand '${info.brand}' embedded in unauthorized domain '${apexDomain}'`,
+        severity: "CRITICAL",
+        isHomoglyph: normApex.includes(key) && !apex.includes(key),
+        isTyposquat: false
+      };
+    }
+
+    // 4. Typosquatting / Fuzzy matching via Levenshtein distance on any token
+    for (const tok of hostTokens) {
+      if (tok.length >= 4 && Math.abs(tok.length - key.length) <= 2) {
+        const dist = levenshtein(tok, key);
+        if (dist === 1 || (dist === 2 && tok.length >= 6)) {
+          const sim = Math.round((1 - dist / Math.max(tok.length, key.length)) * 100);
+          return {
+            detected: true,
+            brand: info.brand,
+            similarity: sim,
+            reason: `Typosquatting variation of '${info.brand}' (token: '${tok}', distance: ${dist})`,
+            severity: "HIGH",
+            isHomoglyph: false,
+            isTyposquat: true
+          };
+        }
+      }
+    }
+  }
+
+  return {
+    detected: false,
+    brand: null,
+    similarity: 0,
+    reason: "No typosquatting found",
+    severity: "NONE",
+    isHomoglyph: false,
+    isTyposquat: false
+  };
+}
 
 const SHORTENERS = new Set([
   "bit.ly", "tinyurl.com", "t.co", "goo.gl", "ow.ly", "is.gd", "buff.ly", "adf.ly", "tiny.cc", "rebrand.ly"
 ]);
 
 const SUSPICIOUS_KEYWORDS = [
-  "bank", "banking", "secure", "verification", "verify", "login", "signin",
+  "bank", "banking", "secure", "security", "verification", "verify", "login", "signin",
   "account", "wallet", "credential", "claim", "prize", "lottery", "winner",
-  "confirm", "update", "suspended", "unusual-activity", "password-reset",
-  "security-check", "billing-update", "authenticate", "2fa", "recovery", "support"
+  "confirm", "confirmation", "update", "suspended", "unusual-activity", "password",
+  "passcode", "pin", "password-reset", "security-check", "billing", "billing-update",
+  "authenticate", "auth", "2fa", "recovery", "support", "alert", "unlock", "restore",
+  "reactivate", "helpdesk", "dispute", "resolution", "fake", "phish"
 ];
 
 function isPrivateIp(ip: string): boolean {
@@ -164,9 +353,9 @@ async function fetchDomainAge(hostname: string, isIp: boolean, vtApiKey?: string
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
-    const rawUrl = body.url?.trim();
+    const rawInput = body.url?.trim();
 
-    if (!rawUrl) {
+    if (!rawInput) {
       return NextResponse.json({ error: "URL parameter is required" }, { status: 400 });
     }
 
@@ -174,14 +363,12 @@ export async function POST(req: Request) {
     const userId = authUser?.user_id || "anonymous";
     const userEmail = authUser?.email || "anonymous@scamshield.ai";
 
-    let normalizedUrl = rawUrl;
-    if (!normalizedUrl.startsWith("http://") && !normalizedUrl.startsWith("https://")) {
-      normalizedUrl = "https://" + normalizedUrl;
-    }
+    // Clean user input: strip Markdown link syntax [text](url), wrapping brackets, or quotes
+    const rawUrl = cleanUserUrl(rawInput);
 
     let urlObj: URL;
     try {
-      urlObj = new URL(normalizedUrl);
+      urlObj = new URL(rawUrl);
     } catch {
       urlObj = new URL("https://invalid-domain.local");
     }
@@ -190,7 +377,7 @@ export async function POST(req: Request) {
     const hostname = urlObj.hostname.toLowerCase();
     const pathname = (urlObj.pathname + urlObj.search).toLowerCase();
 
-    // Parse host elements
+    // Parse host elements & decoded punycode
     const apexDomain = extractApexDomain(hostname);
     const parts = hostname.split(".");
     let domain = apexDomain;
@@ -202,30 +389,63 @@ export async function POST(req: Request) {
     const isIp = /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname) || hostname.includes(":");
     const isPrivate = isIp ? isPrivateIp(hostname) : false;
     const isPunycode = hostname.startsWith("xn--") || hostname.includes(".xn--");
+    const decodedHost = isPunycode ? decodePunycodeHost(hostname) : hostname;
     const isShortened = SHORTENERS.has(hostname);
 
-    // Brand detection
-    let impersonatedBrand: string | null = null;
-    let brandReason = "No typosquatting found";
-    for (const [brand, patterns] of Object.entries(BRAND_PATTERNS)) {
-      const match = patterns.some(p => {
-        const inHost = hostname.includes(p);
-        const isOfficial = hostname.endsWith(`.${p}.com`) || hostname === `${p}.com`;
-        return inHost && !isOfficial;
-      });
-      if (match) {
-        impersonatedBrand = brand;
-        brandReason = `Domain contains '${brand}' keyword without official ownership`;
-        break;
-      }
-    }
+    // Public Form Builder Abuse Detection (e.g. docs.google.com/forms, forms.gle, forms.office.com)
+    const isFormBuilder = (hostname + pathname).includes("forms") && (
+      hostname.includes("google.com") ||
+      hostname.includes("forms.gle") ||
+      hostname.includes("office.com") ||
+      hostname.includes("typeform.com") ||
+      hostname.includes("jotform.com") ||
+      hostname.includes("formstack.com")
+    );
+
+    // Generalized Brand Detection with Homoglyphs, Cyrillic lookalikes & Levenshtein Typosquatting
+    const brandCheck = evaluateBrandImpersonation(hostname, apexDomain, subdomain, decodedHost);
+
+    // High-risk phishing category tokens
+    const FINANCIAL_TOKENS = ["bank", "banking", "creditcard", "debitcard", "wire", "wallet", "kyc", "tax", "irs", "payout", "payroll", "invoice", "payment", "billing", "chase", "wellsfargo", "bofa", "citibank", "secure-bank"];
+    const URGENCY_ACTION_TOKENS = ["verify", "verification", "secure", "security", "confirm", "confirmation", "suspended", "unusual-activity", "update", "unlock", "restore", "reactivate", "auth", "2fa", "password", "pin", "credential", "security-alert", "helpdesk", "dispute", "resolution"];
+    const PRIZE_SCAM_TOKENS = ["claim-prize", "claim", "prize", "lottery", "winner", "winning", "lucky", "giveaway", "airdrop", "reward", "jackpot", "congratulations", "free-gift", "claim-now"];
+
+    const subLower = subdomain.toLowerCase();
+    const normSub = normalizeHomoglyphs(subLower);
+    const hostLower = hostname.toLowerCase();
+    const normHost = normalizeHomoglyphs(decodedHost);
+    const pathLower = pathname.toLowerCase();
+    const fullTargetLower = `${hostLower}${pathLower}`;
+
+    const detectedFinancial = FINANCIAL_TOKENS.filter(t => fullTargetLower.includes(t) || normHost.includes(t));
+    const detectedUrgency = URGENCY_ACTION_TOKENS.filter(t => fullTargetLower.includes(t) || normHost.includes(t));
+    const detectedPrize = PRIZE_SCAM_TOKENS.filter(t => fullTargetLower.includes(t) || normHost.includes(t));
 
     // Subdomain banking / phishing spoofing
-    const subLower = subdomain.toLowerCase();
-    const hasSubdomainSpoofing = ["bank", "verify", "verification", "secure", "login", "signin", "account", "claim", "prize"].some(k => subLower.includes(k));
+    const hasSubdomainSpoofing =
+      (brandCheck.detected && Boolean(subdomain)) ||
+      ["bank", "verify", "verification", "secure", "security", "login", "signin", "account", "claim", "prize", "update", "auth", "support"].some(
+        k => subLower.includes(k) || normSub.includes(k)
+      );
+
+    // Deceptive compound domain formulation (e.g. secure-bank-verification, paypal-security, login-service)
+    const hostHyphenParts = hostLower.split(/[.\-_]+/).filter(Boolean);
+    const compoundTriggers = hostHyphenParts.filter(p =>
+      FINANCIAL_TOKENS.some(f => p.includes(f)) ||
+      URGENCY_ACTION_TOKENS.some(u => p.includes(u)) ||
+      PRIZE_SCAM_TOKENS.some(pr => p.includes(pr)) ||
+      ["support", "alert", "service", "portal", "id", "client"].includes(p)
+    );
+    const hasCompoundDeception = compoundTriggers.length >= 2;
+
+    // Financial Phishing Combo: Financial term + Urgency/Action term
+    const isFinancialPhishingCombo = detectedFinancial.length > 0 && (detectedUrgency.length > 0 || hasSubdomainSpoofing);
+
+    // Prize / Advance-Fee Scam Combo: Prize term + (Financial term OR Action term OR Insecure HTTP)
+    const isPrizeScamCombo = detectedPrize.length > 0 && (detectedFinancial.length > 0 || detectedUrgency.length > 0 || isHttp);
 
     // Keyword detection
-    const detectedKeywords = SUSPICIOUS_KEYWORDS.filter(k => hostname.includes(k) || pathname.includes(k));
+    const detectedKeywords = SUSPICIOUS_KEYWORDS.filter(k => hostname.includes(k) || pathname.includes(k) || normSub.includes(k));
     const onlyAuth = detectedKeywords.length === 1 && (detectedKeywords[0] === "login" || detectedKeywords[0] === "signin");
 
     // External threat lookups and domain age in parallel
@@ -347,7 +567,7 @@ export async function POST(req: Request) {
               },
               {
                 role: "user",
-                content: `Analyze target URL: ${rawUrl}\nHostname: ${hostname}\nProtocol: ${isHttp ? "HTTP (Insecure)" : "HTTPS"}\nSubdomain: ${subdomain}\nPath: ${pathname}`
+                content: `Analyze target URL: ${rawUrl}\nHostname: ${hostname}\nDecoded Host: ${decodedHost}\nProtocol: ${isHttp ? "HTTP (Insecure)" : "HTTPS"}\nSubdomain: ${subdomain}\nPath: ${pathname}`
               }
             ]
           }),
@@ -427,30 +647,104 @@ export async function POST(req: Request) {
       });
     }
 
-    // 2. Subdomain banking / verification spoofing
+    // 2. Brand Impersonation / Typosquatting / Homoglyph Attacks
+    if (brandCheck.detected) {
+      const isCritical = brandCheck.severity === "CRITICAL" || brandCheck.isHomoglyph;
+      const brandPoints = isCritical ? 40 : 30;
+      score += brandPoints;
+      calculationItems.push({
+        factor: `Brand Impersonation / Typosquatting (${brandCheck.brand})`,
+        points: brandPoints,
+        description: brandCheck.reason
+      });
+      indicators.push({
+        name: `Brand Impersonation (${brandCheck.brand})`,
+        evidence: brandCheck.reason,
+        severity: isCritical ? "CRITICAL" : "HIGH",
+        category: "Phishing",
+        description: "Deceptive domain formulation designed to harvest credentials by spoofing an enterprise brand."
+      });
+    }
+
+    // 3. Subdomain brand / financial hijacking
     if (hasSubdomainSpoofing) {
       score += 30;
       calculationItems.push({
-        factor: "Deceptive Financial Subdomain Spoofing",
+        factor: "Deceptive Subdomain Spoofing",
         points: 30,
-        description: `Subdomain prefix '${subdomain}' mimics high-trust banking or verification services on domain '${domain}'.`
+        description: `Subdomain prefix '${subdomain}' leverages high-trust corporate or security services on unauthorized domain '${domain}'.`
       });
       indicators.push({
         name: "Deceptive Subdomain Spoofing",
-        evidence: `Host leverages misleading subdomain '${subdomain}' to imitate financial services`,
+        evidence: `Host leverages misleading subdomain '${subdomain}' to imitate official services`,
         severity: "CRITICAL",
         category: "Domain Heuristics",
         description: "Attackers commonly stack subdomains to trick mobile and desktop users into trusting the URL."
       });
     }
 
-    // 3. Cleartext HTTP on sensitive/phishing target
-    if (isHttp && (detectedKeywords.length > 0 || hasSubdomainSpoofing || impersonatedBrand)) {
+    // 4. Targeted Brand Credential Harvesting Lure (Brand Spoof + Action Keywords)
+    if (brandCheck.detected && detectedKeywords.length > 0) {
+      score += 25;
+      calculationItems.push({
+        factor: "Targeted Brand Credential Harvesting Lure",
+        points: 25,
+        description: `URL pairs brand impersonation (${brandCheck.brand}) with security/credential action tokens: [${detectedKeywords.slice(0, 4).join(", ")}]. Hallmark signature of credential harvesting.`
+      });
+      indicators.push({
+        name: "Targeted Credential Harvesting Lure",
+        evidence: `Brand spoofing combined with action tokens: [${detectedKeywords.slice(0, 4).join(", ")}]`,
+        severity: "CRITICAL",
+        category: "Phishing",
+        description: "Direct phishing attempt targeting user authentication credentials or private accounts."
+      });
+    }
+
+    // 5. Public Form Builder Abuse Check
+    if (isFormBuilder) {
+      const formHasSuspiciousTokens = ["fake", "login", "bank", "verify", "password", "account", "refund", "support", "prize", "winner", "ssn"].some(
+        tok => pathname.includes(tok) || rawUrl.includes(tok)
+      );
+      const formPoints = formHasSuspiciousTokens ? 50 : 35;
+      score += formPoints;
+      calculationItems.push({
+        factor: "Public Form Builder Platform (High Phishing Vector)",
+        points: formPoints,
+        description: `URL targets a public user-generated form builder (${hostname}). Scammers frequently abuse free forms to harvest passwords and sensitive data without setting up domains.`
+      });
+      indicators.push({
+        name: "Public Form Builder Abuse Risk",
+        evidence: `Target uses public form hosting (${hostname}) often abused for credential collection`,
+        severity: formHasSuspiciousTokens ? "CRITICAL" : "HIGH",
+        category: "Form Abuse",
+        description: "Legitimate organizations NEVER use public Google Forms or Microsoft Forms to verify banking or login passwords."
+      });
+    }
+
+    // 6. Punycode / Homoglyph Domain Detection
+    if (isPunycode) {
+      score += 30;
+      calculationItems.push({
+        factor: "Punycode / Homoglyph Domain",
+        points: 30,
+        description: `Host utilizes internationalized domain encoding (${hostname} decodes to '${decodedHost}') to visually imitate authentic brands.`
+      });
+      indicators.push({
+        name: "Punycode / Homoglyph Domain",
+        evidence: `Host '${hostname}' decodes to Unicode lookalike '${decodedHost}'`,
+        severity: "CRITICAL",
+        category: "Deception",
+        description: "Punycode domain visually mimics authentic characters to deceive users."
+      });
+    }
+
+    // 7. Insecure Cleartext HTTP on sensitive/phishing target
+    if (isHttp && (detectedKeywords.length > 0 || hasSubdomainSpoofing || brandCheck.detected || isFinancialPhishingCombo || isPrizeScamCombo)) {
       score += 25;
       calculationItems.push({
         factor: "Insecure Cleartext Protocol for Sensitive Target",
         points: 25,
-        description: "Target transmits login or banking authentication parameters over unencrypted cleartext HTTP."
+        description: "Target transmits login, prize claim, or banking authentication parameters over unencrypted cleartext HTTP."
       });
       indicators.push({
         name: "Cleartext HTTP on Sensitive Portal",
@@ -461,24 +755,58 @@ export async function POST(req: Request) {
       });
     }
 
-    // 4. Brand Impersonation
-    if (impersonatedBrand) {
-      score += 25;
+    // 8. Financial Phishing Lure Combination (Banking + Urgency/Action/Spoof)
+    if (isFinancialPhishingCombo) {
+      score += 35;
       calculationItems.push({
-        factor: `Brand Impersonation / Typosquatting (${impersonatedBrand})`,
-        points: 25,
-        description: `Domain mimics recognized brand '${impersonatedBrand}' without authentic registry ownership.`
+        factor: "Financial Phishing Lure Combination",
+        points: 35,
+        description: `URL pairs financial banking tokens [${detectedFinancial.slice(0, 3).join(", ")}] with urgent security/verification action terms [${detectedUrgency.slice(0, 3).join(", ")}]. Hallmark signature of financial harvesting.`
       });
       indicators.push({
-        name: `Brand Impersonation (${impersonatedBrand})`,
-        evidence: `Domain '${hostname}' references '${impersonatedBrand}' deceptively`,
+        name: "Financial Phishing Lure",
+        evidence: `Banking tokens [${detectedFinancial.slice(0, 3).join(", ")}] paired with action tokens [${detectedUrgency.slice(0, 3).join(", ")}]`,
         severity: "CRITICAL",
-        category: "Phishing",
-        description: "Deceptive domain formulation designed to harvest credentials by spoofing an enterprise brand."
+        category: "Financial Fraud",
+        description: "Deceptive formulation engineered to trick victims into entering bank or card verification credentials."
       });
     }
 
-    // 5. Keyword detection
+    // 9. Prize / Advance-Fee Scam Lure Combination
+    if (isPrizeScamCombo) {
+      score += 35;
+      calculationItems.push({
+        factor: "Prize / Advance-Fee Scam Vector",
+        points: 35,
+        description: `URL structure promotes lottery or prize lures [${detectedPrize.slice(0, 3).join(", ")}] paired with sensitive or unencrypted channels. Classic signature of advance-fee fraud.`
+      });
+      indicators.push({
+        name: "Prize Scam Lure",
+        evidence: `Prize/lottery claim lure identified: [${detectedPrize.slice(0, 3).join(", ")}]`,
+        severity: "CRITICAL",
+        category: "Advance Fee Fraud",
+        description: "Phishing lure dangling fake lottery, prize, or reward claims to steal credentials or advance fees."
+      });
+    }
+
+    // 10. Deceptive Compound Host Formulation
+    if (hasCompoundDeception && !brandCheck.detected) {
+      score += 25;
+      calculationItems.push({
+        factor: "Deceptive Compound Host Formulation",
+        points: 25,
+        description: `Host structure strings multiple deception tokens together: [${compoundTriggers.slice(0, 4).join("-")}]. Typical of synthetic phishing domain generation.`
+      });
+      indicators.push({
+        name: "Deceptive Compound Host Formulation",
+        evidence: `Domain stacks multiple security/financial keywords: [${compoundTriggers.slice(0, 4).join("-")}]`,
+        severity: "HIGH",
+        category: "Domain Heuristics",
+        description: "Synthetic domain construction using hyphenated trust terms to deceive mobile and desktop users."
+      });
+    }
+
+    // 11. Keyword detection
     if (detectedKeywords.length > 0) {
       if (onlyAuth) {
         score += 2;
@@ -505,7 +833,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // 6. Recently Registered Domain Check
+    // 9. Recently Registered Domain Check
     if (domainAge.is_new && domainAge.age_days !== null) {
       score += 15;
       calculationItems.push({
@@ -522,7 +850,7 @@ export async function POST(req: Request) {
       });
     }
 
-    // 7. Direct IP host
+    // 10. Direct IP host
     if (isIp) {
       const ipPoints = isPrivate ? 10 : 20;
       score += ipPoints;
@@ -539,23 +867,7 @@ export async function POST(req: Request) {
       });
     }
 
-    // 8. Punycode
-    if (isPunycode) {
-      score += 25;
-      calculationItems.push({
-        factor: "Punycode / Homoglyph Domain",
-        points: 25,
-        description: "Host utilizes internationalized domain encoding (Punycode) to visually imitate authentic brands."
-      });
-      indicators.push({
-        name: "Punycode / Homoglyph Domain",
-        evidence: `Host '${hostname}' utilizes internationalized domain encoding (Punycode)`,
-        severity: "HIGH",
-        category: "Deception"
-      });
-    }
-
-    // 9. URL shortener
+    // 11. URL shortener
     if (isShortened) {
       score += 15;
       calculationItems.push({
@@ -571,7 +883,7 @@ export async function POST(req: Request) {
       });
     }
 
-    // 10. AI Forensics Blend
+    // 12. AI Forensics Blend
     if (ai?.risk_score) {
       const aiScore = Number(ai.risk_score);
       if (aiScore >= 70) {
@@ -604,10 +916,13 @@ export async function POST(req: Request) {
     else if (finalScore >= 45) riskLevel = "SUSPICIOUS";
     else if (finalScore >= 20) riskLevel = "CAUTION";
 
-    const isThreatConfirmed = finalScore >= 75 || indicators.some(i => i.severity === "CRITICAL");
+    const isThreatConfirmed = finalScore >= 70 || indicators.some(i => i.severity === "CRITICAL");
 
     // Recommendations
     const recommendations: string[] = [];
+    if (isFormBuilder) {
+      recommendations.push("NEVER enter account passwords, banking details, or PINs into Google Forms or public form builders.");
+    }
     if (riskLevel === "HIGH" || riskLevel === "SUSPICIOUS") {
       recommendations.push("Do not enter login credentials, passwords, or payment details on this site.");
       recommendations.push("Navigate directly to the official vendor website by typing their verified URL manually.");
@@ -650,10 +965,11 @@ export async function POST(req: Request) {
       },
       domain_age: domainAge,
       brand_check: {
-        impersonation_detected: Boolean(impersonatedBrand),
-        impersonated_brand: impersonatedBrand,
-        similarity_percentage: impersonatedBrand ? 92 : 0,
-        reason: brandReason
+        impersonation_detected: brandCheck.detected,
+        impersonated_brand: brandCheck.brand,
+        similarity_percentage: brandCheck.similarity,
+        reason: brandCheck.reason,
+        severity: brandCheck.severity
       },
       ip_check: {
         is_ip: isIp,
@@ -673,8 +989,8 @@ export async function POST(req: Request) {
       },
       punycode: {
         is_suspicious_homoglyph: isPunycode,
-        decoded_hostname: hostname,
-        warning: isPunycode ? "Internationalized homoglyph spoofing suspected" : null
+        decoded_hostname: decodedHost,
+        warning: isPunycode ? `Internationalized homoglyph spoofing detected (decodes to '${decodedHost}')` : null
       },
       dns_records: {
         resolved: !isIp,
@@ -708,9 +1024,9 @@ export async function POST(req: Request) {
       ai_analysis: {
         risk_level: riskLevel,
         risk_score: finalScore,
-        category: impersonatedBrand
-          ? `Brand Impersonation (${impersonatedBrand})`
-          : (hasSubdomainSpoofing ? "Financial Subdomain Spoofing" : (ai?.category || "URL Security Forensics")),
+        category: brandCheck.detected
+          ? `Brand Impersonation (${brandCheck.brand})`
+          : (isFormBuilder ? "Public Form Builder Abuse" : (hasSubdomainSpoofing ? "Financial Subdomain Spoofing" : (ai?.category || "URL Security Forensics"))),
         summary: ai?.summary || `Automated inspection evaluated '${hostname}'. Calculated composite threat score: ${finalScore}/100. ${isThreatConfirmed ? "Confirmed fraudulent or spoofing vector detected." : "Domain structural evaluation complete."}`,
         indicators,
         highlighted_sentences: [],

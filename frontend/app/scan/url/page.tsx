@@ -30,16 +30,28 @@ function URLScannerContent() {
   const [scanResult, setScanResult] = useState<ScanRecord | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  function cleanInputUrl(input: string): string {
+    let s = (input || "").trim();
+    const mdMatch = s.match(/\[.*?\]\((https?:\/\/[^\s\)]+)\)/i);
+    if (mdMatch) {
+      s = mdMatch[1];
+    } else {
+      s = s.replace(/^[\[\(<'\"]+/, "").replace(/[\]\)>'\"]+$/, "").trim();
+    }
+    return s;
+  }
+
   useEffect(() => {
-    const qUrl = searchParams.get("url");
-    if (qUrl) {
-      setUrl(qUrl);
-      handleScan(qUrl);
+    const rawTarget = searchParams.get("url") || searchParams.get("target");
+    if (rawTarget) {
+      const cleaned = cleanInputUrl(rawTarget);
+      setUrl(cleaned);
+      handleScan(cleaned);
     }
   }, [searchParams]);
 
   const handleScan = async (targetUrl: string) => {
-    const cleanUrl = targetUrl.trim();
+    const cleanUrl = cleanInputUrl(targetUrl);
     if (!cleanUrl) return;
 
     setLoading(true);
