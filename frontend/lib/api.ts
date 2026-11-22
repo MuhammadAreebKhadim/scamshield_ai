@@ -1,4 +1,15 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api";
+function getApiBase(): string {
+  if (typeof window !== "undefined") {
+    const host = window.location.hostname;
+    // On production (e.g. *.vercel.app, custom domains), always use relative /api
+    // This eliminates Private Network Access (PNA) security popups and network fetch errors completely
+    if (host !== "localhost" && host !== "127.0.0.1") {
+      return "/api";
+    }
+    return process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api";
+  }
+  return process.env.NEXT_PUBLIC_API_URL || "/api";
+}
 
 function getAuthHeaders(): HeadersInit {
   const headers: HeadersInit = {
@@ -100,7 +111,7 @@ export interface UserProfile {
 
 export const api = {
   async scanURL(url: string): Promise<ScanRecord> {
-    const res = await fetch(`${API_BASE}/scan/url`, {
+    const res = await fetch(`${getApiBase()}/scan/url`, {
       method: "POST",
       headers: getAuthHeaders(),
       body: jsonBody({ url }),
@@ -113,7 +124,7 @@ export const api = {
   },
 
   async scanMessage(content: string, channel: string = "Email"): Promise<ScanRecord> {
-    const res = await fetch(`${API_BASE}/scan/message`, {
+    const res = await fetch(`${getApiBase()}/scan/message`, {
       method: "POST",
       headers: getAuthHeaders(),
       body: jsonBody({ content, channel }),
@@ -136,7 +147,7 @@ export const api = {
     interview_platform?: string;
     is_unsolicited?: boolean;
   }): Promise<ScanRecord> {
-    const res = await fetch(`${API_BASE}/scan/job`, {
+    const res = await fetch(`${getApiBase()}/scan/job`, {
       method: "POST",
       headers: getAuthHeaders(),
       body: jsonBody(payload),
@@ -158,7 +169,7 @@ export const api = {
     if (params?.type) q.set("type", params.type);
     if (params?.risk_level) q.set("risk_level", params.risk_level);
 
-    const res = await fetch(`${API_BASE}/scan/history?${q.toString()}`, {
+    const res = await fetch(`${getApiBase()}/scan/history?${q.toString()}`, {
       headers: getAuthHeaders(),
     });
     if (!res.ok) throw new Error("Failed to load scan history");
@@ -166,7 +177,7 @@ export const api = {
   },
 
   async getScan(scanId: string): Promise<ScanRecord> {
-    const res = await fetch(`${API_BASE}/scan/${scanId}`, {
+    const res = await fetch(`${getApiBase()}/scan/${scanId}`, {
       headers: getAuthHeaders(),
     });
     if (!res.ok) throw new Error("Scan report not found");
@@ -174,7 +185,7 @@ export const api = {
   },
 
   async getDashboardStats(): Promise<DashboardStats> {
-    const res = await fetch(`${API_BASE}/dashboard/stats`, {
+    const res = await fetch(`${getApiBase()}/dashboard/stats`, {
       headers: getAuthHeaders(),
     });
     if (!res.ok) throw new Error("Failed to load dashboard metrics");
@@ -182,7 +193,7 @@ export const api = {
   },
 
   async googleAuth(credential: string): Promise<{ access_token: string; user: UserProfile }> {
-    const res = await fetch(`${API_BASE}/auth/google`, {
+    const res = await fetch(`${getApiBase()}/auth/google`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: jsonBody({ credential }),
@@ -200,7 +211,7 @@ export const api = {
   },
 
   async emailAuth(email: string, name?: string): Promise<{ access_token: string; user: UserProfile }> {
-    const res = await fetch(`${API_BASE}/auth/email`, {
+    const res = await fetch(`${getApiBase()}/auth/email`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: jsonBody({ email, name }),
@@ -218,7 +229,7 @@ export const api = {
   },
 
   async getMe(): Promise<UserProfile | null> {
-    const res = await fetch(`${API_BASE}/auth/me`, {
+    const res = await fetch(`${getApiBase()}/auth/me`, {
       headers: getAuthHeaders(),
     });
     if (!res.ok) return null;
