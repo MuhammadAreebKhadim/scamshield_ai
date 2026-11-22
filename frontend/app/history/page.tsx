@@ -174,7 +174,63 @@ export default function HistoryPage() {
 
       {/* Table */}
       <div className="mt-6 cyber-card rounded-2xl overflow-hidden shadow-xl">
-        <div className="overflow-x-auto">
+        {/* Mobile Responsive History Feed */}
+        <div className="block md:hidden divide-y divide-slate-200 dark:divide-slate-800">
+          {filteredScans.length > 0 ? (
+            filteredScans.map((scan) => {
+              const isHigh = scan.risk_level === "HIGH";
+              const isSuspicious = scan.risk_level === "SUSPICIOUS";
+              const isCaution = scan.risk_level === "CAUTION";
+              const badgeColor = isHigh
+                ? "bg-rose-500/15 text-rose-500 border-rose-500/30"
+                : isSuspicious
+                ? "bg-orange-500/15 text-orange-500 border-orange-500/30"
+                : isCaution
+                ? "bg-amber-500/15 text-amber-500 border-amber-500/30"
+                : "bg-emerald-500/15 text-emerald-500 border-emerald-500/30";
+
+              const TypeIcon = scan.input_type === "url" 
+                ? Globe 
+                : scan.input_type === "job" 
+                ? Briefcase 
+                : MessageSquareWarning;
+
+              return (
+                <Link
+                  key={scan.scan_id}
+                  href={`/report/${scan.scan_id}`}
+                  className="p-4 block hover:bg-slate-50 dark:hover:bg-cyber-850/50 transition-colors active:bg-slate-100 dark:active:bg-slate-800/60"
+                >
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <span className="flex items-center gap-1.5 text-xs font-mono font-bold uppercase text-slate-700 dark:text-slate-300">
+                      <TypeIcon className="w-3.5 h-3.5 text-cyan-500" />
+                      <span>{scan.input_type}</span>
+                    </span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider ${badgeColor}`}>
+                      {scan.risk_level} ({scan.risk_score}/100)
+                    </span>
+                  </div>
+                  <p className="text-xs font-sans text-slate-900 dark:text-slate-100 line-clamp-2 mb-2 font-medium">
+                    {scan.input_summary}
+                  </p>
+                  <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
+                    <span>{scan.scan_id}</span>
+                    <span className="text-cyan-500 font-semibold inline-flex items-center gap-0.5">
+                      View Report &rarr;
+                    </span>
+                  </div>
+                </Link>
+              );
+            })
+          ) : (
+            <div className="py-12 text-center text-slate-500 font-sans text-xs">
+              No historical records found matching filter criteria.
+            </div>
+          )}
+        </div>
+
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs font-mono">
             <thead className="bg-slate-50 dark:bg-cyber-900 border-b border-slate-200 dark:border-slate-800 text-slate-500 uppercase tracking-wider">
               <tr>

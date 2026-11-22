@@ -34,55 +34,57 @@ export default function HomePage() {
   };
 
   return (
-    <div className="relative overflow-hidden py-12 lg:py-20">
+    <div className="relative overflow-hidden py-8 sm:py-12 lg:py-20">
       
       {/* Background Animated Glow Elements */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-gradient-to-tr from-cyan-500/10 via-blue-500/10 to-indigo-500/10 rounded-full blur-3xl pointer-events-none animate-pulse-glow" />
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[320px] sm:w-[600px] h-[250px] sm:h-[350px] bg-gradient-to-tr from-cyan-500/10 via-blue-500/10 to-indigo-500/10 rounded-full blur-3xl pointer-events-none animate-pulse-glow" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         
         {/* Hero Section */}
-        <div className="text-center max-w-4xl mx-auto space-y-6">
+        <div className="text-center max-w-4xl mx-auto space-y-5 sm:space-y-6">
           
           {/* Status Pill */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 text-xs font-mono tracking-wide">
-            <Activity className="w-3.5 h-3.5 animate-spin" />
-            <span>REAL-TIME THREAT INTELLIGENCE & HEURISTIC ENGINE</span>
+          <div className="inline-flex items-center gap-2 px-3 sm:px-3.5 py-1 sm:py-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 text-[11px] sm:text-xs font-mono tracking-wide">
+            <Activity className="w-3.5 h-3.5 animate-spin flex-shrink-0" />
+            <span className="truncate">REAL-TIME THREAT INTELLIGENCE &amp; HEURISTIC ENGINE</span>
           </div>
 
           {/* Main Title */}
-          <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-[1.15]">
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-[1.18] sm:leading-[1.15]">
             Stay One Step Ahead of <br className="hidden sm:inline" />
             <span className="bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 bg-clip-text text-transparent">
-              Digital Scams & Fraud.
+              Digital Scams &amp; Fraud.
             </span>
           </h1>
 
           {/* Subtitle */}
-          <p className="text-base sm:text-xl text-slate-600 dark:text-slate-300 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-sm sm:text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto leading-relaxed px-2">
             Analyze suspicious URLs, phishing emails, SMS, and fake job offers using real-time threat intelligence and AI-powered evidence forensics.
           </p>
 
           {/* Omni Quick-Scan Input Bar */}
-          <form onSubmit={handleQuickScan} className="max-w-2xl mx-auto mt-8">
-            <div className="relative flex items-center p-2 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-cyber-900/90 shadow-2xl backdrop-blur-md focus-within:border-cyan-500 transition-all">
-              <Search className="w-5 h-5 text-slate-400 ml-3" />
-              <input
-                type="text"
-                value={quickInput}
-                onChange={(e) => setQuickInput(e.target.value)}
-                placeholder="Paste any link, email snippet, or recruitment message..."
-                className="w-full bg-transparent px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none"
-              />
+          <form onSubmit={handleQuickScan} className="max-w-2xl mx-auto mt-6 sm:mt-8">
+            <div className="relative flex flex-col sm:flex-row items-stretch sm:items-center p-2 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-cyber-900/90 shadow-2xl backdrop-blur-md focus-within:border-cyan-500 transition-all gap-2 sm:gap-0">
+              <div className="flex items-center flex-1 px-2">
+                <Search className="w-5 h-5 text-slate-400 flex-shrink-0 ml-1" />
+                <input
+                  type="text"
+                  value={quickInput}
+                  onChange={(e) => setQuickInput(e.target.value)}
+                  placeholder="Paste link, message, or job offer..."
+                  className="w-full bg-transparent px-3 py-2.5 text-base sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none"
+                />
+              </div>
               <button
                 type="submit"
-                className="cyber-btn flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold text-sm shadow-lg shadow-cyan-500/25 hover:brightness-110 active:scale-95 transition-all whitespace-nowrap cursor-pointer"
+                className="cyber-btn flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold text-sm shadow-lg shadow-cyan-500/25 hover:brightness-110 active:scale-95 transition-all whitespace-nowrap cursor-pointer w-full sm:w-auto"
               >
                 <span>Analyze Now</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
-            <div className="flex items-center justify-center gap-6 mt-3 text-xs text-slate-500 dark:text-slate-400 font-mono">
+            <div className="flex items-center justify-center gap-4 sm:gap-6 mt-3 text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-mono">
               <span>Auto-detects: Links</span>
               <span>Messages</span>
               <span>Job Offers</span>
@@ -92,7 +94,7 @@ export default function HomePage() {
         </div>
 
         {/* Three Primary Action Cards */}
-        <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+        <div className="mt-12 sm:mt-16 grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 max-w-6xl mx-auto">
           
           {/* Card 1: URL Scanner */}
           <Link

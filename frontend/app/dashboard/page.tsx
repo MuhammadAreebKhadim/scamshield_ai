@@ -79,19 +79,19 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 w-full sm:w-auto">
           <button
             onClick={fetchStats}
             disabled={loading}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-cyber-900 text-xs font-semibold hover:border-cyan-500 transition-colors cursor-pointer"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 sm:px-3.5 sm:py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-cyber-900 text-xs font-semibold hover:border-cyan-500 transition-colors cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-cyan-500" : ""}`} />
-            <span>Refresh Telemetry</span>
+            <span>Refresh</span>
           </button>
           <Link
             href="/scan/url"
             prefetch={true}
-            className="cyber-btn flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-xs font-bold shadow-md shadow-cyan-500/20"
+            className="cyber-btn flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-xs font-bold shadow-md shadow-cyan-500/20 whitespace-nowrap"
           >
             <span>New Scan</span>
             <ArrowUpRight className="w-3.5 h-3.5" />
@@ -214,7 +214,7 @@ export default function DashboardPage() {
             <Layers className="w-5 h-5 text-cyan-500" />
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 pt-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 pt-2">
             {stats && Object.entries(stats.threat_categories).map(([category, count]) => {
               const total = stats.total_scans || 1;
               const percentage = Math.round((count / total) * 100);
@@ -259,7 +259,63 @@ export default function DashboardPage() {
             </Link>
           </div>
 
-          <div className="overflow-x-auto">
+          {/* Mobile Responsive Card Feed (Visible on phones) */}
+          <div className="block md:hidden divide-y divide-slate-200 dark:divide-slate-800">
+            {stats?.recent_scans && stats.recent_scans.length > 0 ? (
+              stats.recent_scans.map((scan) => {
+                const isHigh = scan.risk_level === "HIGH";
+                const isSuspicious = scan.risk_level === "SUSPICIOUS";
+                const isCaution = scan.risk_level === "CAUTION";
+                const badgeColor = isHigh
+                  ? "bg-rose-500/15 text-rose-500 border-rose-500/30"
+                  : isSuspicious
+                  ? "bg-orange-500/15 text-orange-500 border-orange-500/30"
+                  : isCaution
+                  ? "bg-amber-500/15 text-amber-500 border-amber-500/30"
+                  : "bg-emerald-500/15 text-emerald-500 border-emerald-500/30";
+
+                const TypeIcon = scan.input_type === "url" 
+                  ? Globe 
+                  : scan.input_type === "job" 
+                  ? Briefcase 
+                  : MessageSquareWarning;
+
+                return (
+                  <Link
+                    key={scan.scan_id}
+                    href={`/report/${scan.scan_id}`}
+                    className="p-4 block hover:bg-slate-50 dark:hover:bg-cyber-850/50 transition-colors active:bg-slate-100 dark:active:bg-slate-800/60"
+                  >
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <span className="flex items-center gap-1.5 text-xs font-mono font-bold uppercase text-slate-700 dark:text-slate-300">
+                        <TypeIcon className="w-3.5 h-3.5 text-cyan-500" />
+                        <span>{scan.input_type}</span>
+                      </span>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider ${badgeColor}`}>
+                        {scan.risk_level} ({scan.risk_score}/100)
+                      </span>
+                    </div>
+                    <p className="text-xs font-sans text-slate-900 dark:text-slate-100 line-clamp-2 mb-2 font-medium">
+                      {scan.input_summary}
+                    </p>
+                    <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
+                      <span>{scan.scan_id}</span>
+                      <span className="text-cyan-500 font-semibold inline-flex items-center gap-0.5">
+                        Inspect Report &rarr;
+                      </span>
+                    </div>
+                  </Link>
+                );
+              })
+            ) : (
+              <div className="py-8 text-center text-slate-500 font-sans text-xs">
+                No scan records found. Run a new scan to populate telemetry.
+              </div>
+            )}
+          </div>
+
+          {/* Desktop Table View (Visible on tablets and desktops) */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50 dark:bg-cyber-900/80 border-b border-slate-200 dark:border-slate-800 font-mono text-slate-500 uppercase tracking-wider">
                 <tr>

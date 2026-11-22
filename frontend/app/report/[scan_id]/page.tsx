@@ -118,17 +118,17 @@ export default function DetailedReportPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 w-full sm:w-auto">
           <button
             onClick={handlePrint}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-cyber-900 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:border-cyan-500 transition-colors shadow-sm"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-cyber-900 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:border-cyan-500 transition-colors shadow-sm cursor-pointer"
           >
             <Printer className="w-3.5 h-3.5" />
-            <span>Export PDF / Print</span>
+            <span>Export PDF</span>
           </button>
           <Link
             href={scan.input_type === "url" ? "/scan/url" : scan.input_type === "job" ? "/scan/job" : "/scan/message"}
-            className="cyber-btn flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-xs font-bold"
+            className="cyber-btn flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-xs font-bold whitespace-nowrap"
           >
             <span>Scan Another</span>
           </Link>
