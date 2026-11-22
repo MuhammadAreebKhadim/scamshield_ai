@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="logoBladeLeft" x1="12" y1="8" x2="32" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#00F2FE" />
+      <stop offset="100%" stop-color="#0066FF" />
+    </linearGradient>
+    <linearGradient id="logoBladeRight" x1="52" y1="8" x2="32" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#38BDF8" />
+      <stop offset="100%" stop-color="#1E40AF" />
+    </linearGradient>
+    <filter id="coreGlowLogo" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="1.8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Left Precision Blade -->
+  <path d="M30.5 8 L12 17 V33.5 C12 45.8 20.5 53.2 30.5 56.8 V35.5 L21.5 28.5 L30.5 22 V8 Z" fill="url(#logoBladeLeft)" />
+
+  <!-- Right Precision Blade -->
+  <path d="M33.5 8 L52 17 V33.5 C52 45.8 43.5 53.2 33.5 56.8 V35.5 L42.5 28.5 L33.5 22 V8 Z" fill="url(#logoBladeRight)" />
+
+  <!-- Central Security Core -->
+  <polygon points="32,22.5 37.5,28.5 32,34.5 26.5,28.5" fill="#00F2FE" filter="url(#coreGlowLogo)" />
+  <polygon points="32,41.5 35.5,45.5 32,49.5 28.5,45.5" fill="#38BDF8" />
+</svg>

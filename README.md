@@ -1,10 +1,43 @@
-# ScamShield AI
+<div align="center">
 
-**Tagline**: *Detect Scams. Verify Claims. Stay Protected.*
+  <img src="assets/logo.svg" alt="ScamShield AI Precision Cyber Shield Logo" width="80" height="80" />
 
-ScamShield AI is an enterprise-grade cybersecurity and fraud intelligence platform. It unifies multi-vendor threat intelligence feeds, heuristic algorithmic analyzers, and AI contextual forensics to identify malicious links, phishing clones, deceptive messages, and recruitment fraud.
+  # ScamShield AI
+  ### CYBERSECURITY THREAT OPERATIONS & FRAUD INTELLIGENCE PLATFORM
 
-![ScamShield AI Threat Intelligence & Scan Dashboard](docs/images/dashboard.png)
+  **Unified Threat Detection & Forensic Analysis for Malicious Links, Phishing Clones, & Digital Deception**
+
+  <br />
+
+  [![Live Production](https://img.shields.io/badge/▲_LIVE_PRODUCTION-SCAMSHIELD--AI--WELD--PI.VERCEL.APP-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://scamshield-ai-weld-pi.vercel.app)
+
+  <br />
+
+  [![Stars](https://img.shields.io/github/stars/MuhammadAreebKhadim/scamshield_ai?style=for-the-badge&color=0066FF)](https://github.com/MuhammadAreebKhadim/scamshield_ai/stargazers)
+  [![Forks](https://img.shields.io/github/forks/MuhammadAreebKhadim/scamshield_ai?style=for-the-badge&color=00F2FE)](https://github.com/MuhammadAreebKhadim/scamshield_ai/network/members)
+  [![Issues](https://img.shields.io/github/issues/MuhammadAreebKhadim/scamshield_ai?style=for-the-badge&color=10B981)](https://github.com/MuhammadAreebKhadim/scamshield_ai/issues)
+  [![License](https://img.shields.io/badge/LICENSE-MIT-0284C7?style=for-the-badge)](LICENSE)
+
+  <br />
+
+  [![Groq AI](https://img.shields.io/badge/Groq_AI-LLaMA--3.3_70B-F55036?style=for-the-badge&logo=groq&logoColor=white)](https://groq.com)
+  [![VirusTotal](https://img.shields.io/badge/VirusTotal_API-v3_60+_Engines-3949AB?style=for-the-badge&logo=virustotal&logoColor=white)](https://www.virustotal.com)
+  [![Google Safe Browsing](https://img.shields.io/badge/Google_Safe_Browsing-v4_API-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://safebrowsing.google.com)
+  [![URLhaus](https://img.shields.io/badge/URLhaus-Live_Threat_Feed-D32F2F?style=for-the-badge)](https://urlhaus.abuse.ch)
+
+  [![Next.js 15](https://img.shields.io/badge/Next.js_15-React_19-black?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org)
+  [![Python](https://img.shields.io/badge/Python-3.12_REST_API-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+  [![SQLite](https://img.shields.io/badge/SQLite-Audited_Store-003B57?style=for-the-badge&logo=sqlite&logoColor=white)](https://sqlite.org)
+  [![Google OAuth 2.0](https://img.shields.io/badge/Google_OAuth_2.0-Identity_Services-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/identity)
+  [![Vercel](https://img.shields.io/badge/Vercel-Production_Live-black?style=for-the-badge&logo=vercel&logoColor=white)](https://scamshield-ai-weld-pi.vercel.app)
+
+</div>
+
+---
+
+<p align="center">
+  <img src="assets/dashboard.png" alt="ScamShield AI Threat Intelligence & Scan Dashboard" width="900" style="border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);" />
+</p>
 
 ---
 
@@ -17,19 +50,23 @@ ScamShield AI is an enterprise-grade cybersecurity and fraud intelligence platfo
 6. [URL Detection Methodology & Key Identification Areas](#url-detection-methodology--key-identification-areas)
 7. [Risk Scoring Model & Consistency Validation](#risk-scoring-model--consistency-validation)
 8. [Getting Started & Local Development](#getting-started--local-development)
-9. [Deployment](#deployment)
+9. [Production Deployment](#production-deployment)
+10. [License](#license)
 
 ---
 
 ## Overview
 
-ScamShield AI protects individuals and organizations from the expanding spectrum of digital deception. Rather than providing ambiguous, opaque verdicts, ScamShield AI delivers full forensic dossiers that explain the underlying mechanics behind every threat: domain age telemetry, vendor flag ratios, deceptive sentence highlights, and defensive remediation protocols.
+ScamShield AI is an intelligent fraud detection and cybersecurity intelligence platform designed to neutralize evolving online threats. While conventional filters issue generic and opaque blocks, ScamShield AI delivers comprehensive forensic dossiers breaking down exact evidence: domain age telemetry, vendor flag ratios, deceptive sentence highlights, and defensive remediation protocols.
+
+- **Production URL**: [https://scamshield-ai-weld-pi.vercel.app](https://scamshield-ai-weld-pi.vercel.app)
+- **Secondary Production Alias**: [https://scamshield-ai-wolf-go.vercel.app](https://scamshield-ai-wolf-go.vercel.app)
 
 ---
 
 ## System Architecture
 
-The ScamShield AI platform follows a modern decoupled architecture separating the cyber-themed Next.js frontend from the high-throughput Python threat inspection engine:
+The ScamShield AI platform follows a decoupled micro-architecture separating the cyber-themed Next.js 15 frontend from the high-throughput Python threat inspection engine:
 
 ```
                                       CLIENT BROWSER
@@ -251,18 +288,16 @@ npm install
 # Run development server
 npm run dev
 ```
-Frontend application will start on `http://localhost:3001` (or `http://localhost:3000`).
+Frontend dashboard will be running on `http://localhost:3001` (or `http://localhost:3000`).
 
 ---
 
-## Deployment
+## Production Deployment
 
-The Next.js frontend is configured for deployment on Vercel, with rewrites routing API calls to the production backend endpoint.
+The platform is deployed live on Vercel:
 
-```bash
-# Deploy to Vercel via CLI
-npx vercel --token <VERCEL_TOKEN> --prod
-```
+- **Primary URL**: [https://scamshield-ai-weld-pi.vercel.app](https://scamshield-ai-weld-pi.vercel.app)
+- **Secondary Alias**: [https://scamshield-ai-wolf-go.vercel.app](https://scamshield-ai-wolf-go.vercel.app)
 
 ---
 
