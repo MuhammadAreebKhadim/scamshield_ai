@@ -29,7 +29,6 @@
   [![Python](https://img.shields.io/badge/Python-3.12_REST_API-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
   [![SQLite](https://img.shields.io/badge/SQLite-Audited_Store-003B57?style=for-the-badge&logo=sqlite&logoColor=white)](https://sqlite.org)
   [![Google OAuth 2.0](https://img.shields.io/badge/Google_OAuth_2.0-Identity_Services-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/identity)
-  [![Vercel](https://img.shields.io/badge/Vercel-Production_Live-black?style=for-the-badge&logo=vercel&logoColor=white)](https://scamshield-ai-weld-pi.vercel.app)
 
 </div>
 
@@ -60,7 +59,6 @@
 ScamShield AI is an intelligent fraud detection and cybersecurity intelligence platform designed to neutralize evolving online threats. While conventional filters issue generic and opaque blocks, ScamShield AI delivers comprehensive forensic dossiers breaking down exact evidence: domain age telemetry, vendor flag ratios, deceptive sentence highlights, and defensive remediation protocols.
 
 - **Production URL**: [https://scamshield-ai-weld-pi.vercel.app](https://scamshield-ai-weld-pi.vercel.app)
-- **Secondary Production Alias**: [https://scamshield-ai-wolf-go.vercel.app](https://scamshield-ai-wolf-go.vercel.app)
 
 ---
 
@@ -297,7 +295,6 @@ Frontend dashboard will be running on `http://localhost:3001` (or `http://localh
 The platform is deployed live on Vercel:
 
 - **Primary URL**: [https://scamshield-ai-weld-pi.vercel.app](https://scamshield-ai-weld-pi.vercel.app)
-- **Secondary Alias**: [https://scamshield-ai-wolf-go.vercel.app](https://scamshield-ai-wolf-go.vercel.app)
 
 ---
 
