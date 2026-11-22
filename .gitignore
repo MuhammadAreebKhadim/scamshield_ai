@@ -50,5 +50,9 @@ npm-debug.log*
 yarn-debug.log*
 pnpm-debug.log*
 
+# Deployment scripts with credentials
+backend/deploy_to_vercel.py
+deploy_*.py
+
 # Vercel
 .vercel
