@@ -35,7 +35,7 @@
 
 <div align="center">
   <a href="https://scamshield-ai-weld-pi.vercel.app" target="_blank" rel="noopener noreferrer">
-    <img src="assets/dashboard.png" alt="ScamShield AI Threat Intelligence & Forensic Platform" width="920" style="max-width: 100%; height: auto; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);" />
+    <img src="assets/preview.jpg" alt="ScamShield AI Cyber Threat Intelligence & Forensic Platform" width="920" style="max-width: 100%; height: auto; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);" />
   </a>
 </div>
 
